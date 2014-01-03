@@ -4,8 +4,9 @@ import org.scalautils.TypeCheckedTripleEquals
 import org.scalatest.FlatSpec
 import akka.util.ByteString
 import scala.collection.mutable
+import org.programmiersportgruppe.redis.test.Test
 
-class ParserCombinatorReplyReconstructorTest extends FlatSpec with TypeCheckedTripleEquals {
+class ParserCombinatorReplyReconstructorTest extends Test {
 
   behavior of "a reply reconstructor"
 

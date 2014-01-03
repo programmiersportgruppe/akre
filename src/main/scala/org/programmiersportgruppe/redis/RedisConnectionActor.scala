@@ -6,11 +6,13 @@ import scala.collection.mutable
 import akka.actor.{ActorRef, Actor, Props}
 import akka.io.{Tcp, IO}
 import akka.event.Logging
-import org.programmiersportgruppe.redis.RedisConnectionActor.{Connected, WaitForConnection}
+import org.programmiersportgruppe.redis.RedisConnectionActor.{UnableToConnectException, Connected, WaitForConnection}
 
 object RedisConnectionActor {
   object WaitForConnection
   object Connected
+
+  case class UnableToConnectException(command: Tcp.Connect) extends RuntimeException
 
   def props(remote: InetSocketAddress) = Props(classOf[RedisConnectionActor], remote)
 }
@@ -26,11 +28,14 @@ class RedisConnectionActor(remote: InetSocketAddress) extends Actor {
   IO(Tcp)(context.system) ! Tcp.Connect(remote)
 
   def receive = {
-    case Tcp.CommandFailed(_: Tcp.Connect) =>
+    case Tcp.CommandFailed(connect: Tcp.Connect) =>
+      throw new UnableToConnectException(connect)
       //            listener ! "connect failed"
       context stop self
     case command: Command =>
-      log.error("Recieved command {} before I was connected", command)
+      val message = "Received command before connected: " + command
+      log.error(message)
+      throw new RuntimeException(message)
 
     case WaitForConnection => waitingForStatus enqueue sender
     case c @ Tcp.Connected(remote, local) =>
