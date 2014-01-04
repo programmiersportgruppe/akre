@@ -53,6 +53,7 @@ class ActorSystemAcceptanceTest extends Test {
       akka {
         loglevel = DEBUG
         log-dead-letters = 100
+        actor.debug.unhandled = on
       }
       """
     ))
