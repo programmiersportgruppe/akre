@@ -77,7 +77,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
         val set = SET(Key("foo"), ByteString("bar"))
         intercept[RuntimeException] {
           try {
-            ref.receive(set)
+            await(ref ? set)
           } finally {
             assertResult(false, "For the test to be valid, we can't have been notified of a successful connection yet") {
               futureConnected.isCompleted
