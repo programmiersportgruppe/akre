@@ -10,7 +10,7 @@ case object ErrorSigil extends Sigil('-')
 case object IntegerSigil extends Sigil(':')
 case object BulkSigil extends Sigil('$')
 case object MultiBulkSigil extends Sigil('*')
-case class IntegerNewlineToken(value: Int) extends Token
+case class IntegerNewlineToken(value: Long) extends Token
 case class ByteStringToken(value: ByteString) extends Token
 case object NewlineToken extends Token
 

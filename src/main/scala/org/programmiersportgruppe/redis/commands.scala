@@ -9,7 +9,7 @@ case class Key(key: ByteString) extends CommandArgument { override lazy val toBy
 object Key { def apply(key: String) = new Key(ByteString(key)) }
 case class RByteString(value: ByteString) extends CommandArgument { override lazy val toByteString = value }
 case class RString(value: String) extends CommandArgument { override lazy val toByteString = ByteString(value) }
-case class RInteger(value: Int) extends CommandArgument { override lazy val toByteString = ByteString(value.toString) }
+case class RInteger(value: Long) extends CommandArgument { override lazy val toByteString = ByteString(value.toString) }
 
 
 sealed abstract class Command(commandName: String, args: Seq[CommandArgument]) {
@@ -45,7 +45,7 @@ trait BulkExpected {
 }
 trait IntegerExpected {
   self: Command =>
-  def executeInt(implicit client: RedisClient): Future[Int] = client.executeInt(this)
+  def executeLong(implicit client: RedisClient): Future[Long] = client.executeLong(this)
 }
 
 trait BooleanIntegerExpected
@@ -58,14 +58,14 @@ trait BooleanIntegerExpected
 case class DEL(key: Key, additionalKeys: Key*) extends NamedCommand(key +: additionalKeys: _*) with IntegerExpected
 case class DUMP(key: Key) extends NamedCommand(key) with BulkExpected
 case class EXISTS(key: Key) extends NamedCommand(key) with BooleanIntegerExpected
-case class EXPIRE(key: Key, seconds: Int) extends NamedCommand(key, RInteger(seconds)) with BooleanIntegerExpected
+case class EXPIRE(key: Key, seconds: Long) extends NamedCommand(key, RInteger(seconds)) with BooleanIntegerExpected
 
 // Strings
 case class GET(key: Key) extends NamedCommand(key) with BulkExpected
 
-sealed abstract class ExpirationPolicy(flag: String, duration: Int) { val args = Seq(RString(flag), RInteger(duration)) }
-case class ExpiresInSeconds(seconds: Int) extends ExpirationPolicy("EX", seconds)
-case class ExpiresInMilliseconds(millis: Int) extends ExpirationPolicy("PX", millis)
+sealed abstract class ExpirationPolicy(flag: String, duration: Long) { val args = Seq(RString(flag), RInteger(duration)) }
+case class ExpiresInSeconds(seconds: Long) extends ExpirationPolicy("EX", seconds)
+case class ExpiresInMilliseconds(millis: Long) extends ExpirationPolicy("PX", millis)
 
 sealed abstract class CreationRestriction(flag: String) { val arg = RString(flag) }
 case object OnlyIfKeyDoesNotAlreadyExist extends CreationRestriction("NX")

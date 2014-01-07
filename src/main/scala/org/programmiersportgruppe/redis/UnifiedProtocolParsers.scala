@@ -26,7 +26,7 @@ trait UnifiedProtocolParsers extends Parsers {
   def newlineTerminatedByteString: Parser[ByteString] = newline | (elem("any byte", _ => true) ~! newlineTerminatedByteString ^^ { case ~(c, cs) => c +: cs })
   def newlineTerminatedString: Parser[String] = newlineTerminatedByteString ^^ (_.utf8String)
 
-  def terminatedInteger: Parser[Int] = newlineTerminatedString ^^ (_.toInt)
+  def terminatedInteger: Parser[Long] = newlineTerminatedString ^^ (_.toLong)
 
 
   def reply: Parser[Reply] = statusReply | errorReply | integerReply | bulkReply | multiBulkReply
@@ -36,7 +36,7 @@ trait UnifiedProtocolParsers extends Parsers {
   def integerReply: Parser[IntegerReply] = ":" ~> commit(terminatedInteger) ^^ IntegerReply
   def bulkReply: Parser[BulkReply] = "$" ~> commit(terminatedInteger >> {
     case -1 => success(None)
-    case size => bytes(size) <~ newline ^^ Some.apply
+    case size => bytes(size.toInt) <~ newline ^^ Some.apply
   }) ^^ BulkReply
-  def multiBulkReply: Parser[MultiBulkReply] = ("*" ~> commit(terminatedInteger)).flatMap(n => repN(n, reply)) ^^ MultiBulkReply
+  def multiBulkReply: Parser[MultiBulkReply] = ("*" ~> commit(terminatedInteger)).flatMap(n => repN(n.toInt, reply)) ^^ MultiBulkReply
 }

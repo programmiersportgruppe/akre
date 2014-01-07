@@ -30,7 +30,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
 
 //  def executeForReply(command: RedisCommand): Future[Reply] = execute(command).mapTo[Reply]
 
-  def executeInt(command: Command with IntegerExpected): Future[Int] =
+  def executeLong(command: Command with IntegerExpected): Future[Long] =
     execute(command) map { case IntegerReply(value) => value }
 
 //  def executeBoolean(command: RedisCommand[IntegerReply]): Future[Boolean] = executeAny(command) map { case IntegerReply(0) => false; case IntegerReply(1) => true }

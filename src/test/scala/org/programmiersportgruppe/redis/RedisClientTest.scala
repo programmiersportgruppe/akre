@@ -33,7 +33,7 @@ class RedisClientTest extends ActorSystemAcceptanceTest {
 
         val deleted = for {
           s <- SET(Key("A key"), ByteString("A value")).execute
-          d <- DEL(Key("A key")).executeInt
+          d <- DEL(Key("A key")).executeLong
         } yield d
 
         assertResult(1) { await(deleted) }
