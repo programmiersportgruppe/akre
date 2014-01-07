@@ -1,4 +1,6 @@
-name := "redis-client"
+name := "akre"
+
+organization := "org.programmiersportgruppe"
 
 version := "0.1"
 
