@@ -8,7 +8,11 @@ import akka.actor.ActorSystem
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import scala.sys.process.ProcessLogger
+import java.util.concurrent.atomic.AtomicInteger
 
+object ActorSystemAcceptanceTest {
+  val nextRedisServerPort = new AtomicInteger(4321)
+}
 
 class ActorSystemAcceptanceTest extends Test {
 
@@ -17,8 +21,10 @@ class ActorSystemAcceptanceTest extends Test {
 
   def await(awaitable: Awaitable[_]) = Await.result(awaitable, 5 seconds)
 
+  lazy val redisServerPort = ActorSystemAcceptanceTest.nextRedisServerPort.getAndIncrement
+
   def withRedisServer(testCode: InetSocketAddress => Any) {
-    val address = new InetSocketAddress("localhost", 4321)
+    val address = new InetSocketAddress("localhost", redisServerPort)
 
     val output = new StringBuilder
     val serverReady = Promise[Unit]()
