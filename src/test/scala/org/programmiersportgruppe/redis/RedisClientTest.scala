@@ -25,4 +25,20 @@ class RedisClientTest extends ActorSystemAcceptanceTest {
     }
   }
 
+
+  it should "delete stored keys" in {
+    withRedisServer { serverAddress =>
+      withActorSystem { actorSystem =>
+        implicit val client = new RedisClient(actorSystem, serverAddress, 4 seconds, 3)
+
+        val deleted = for {
+          s <- SET(Key("A key"), ByteString("A value")).execute
+          d <- DEL(Key("A key")).executeInt
+        } yield d
+
+        assertResult(1) { await(deleted) }
+      }
+    }
+  }
+
 }

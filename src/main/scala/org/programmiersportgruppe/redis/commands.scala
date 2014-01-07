@@ -43,7 +43,11 @@ trait BulkExpected {
   def executeByteString(implicit client: RedisClient): Future[Option[ByteString]] = client.executeByteString(this)
   def executeString(implicit client: RedisClient): Future[Option[String]] = client.executeString(this)
 }
-trait IntegerExpected
+trait IntegerExpected {
+  self: Command =>
+  def executeInt(implicit client: RedisClient): Future[Int] = client.executeInt(this)
+}
+
 trait BooleanIntegerExpected
 
 //sealed abstract class IntCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[IntegerReply](args)

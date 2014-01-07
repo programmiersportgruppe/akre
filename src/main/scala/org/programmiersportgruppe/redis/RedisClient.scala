@@ -29,7 +29,10 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
     execute(command) map { case BulkReply(data) => data.map(_.utf8String) }
 
 //  def executeForReply(command: RedisCommand): Future[Reply] = execute(command).mapTo[Reply]
-//  def executeInt(command: RedisCommand[IntegerReply]): Future[Int] = executeAny(command) map { case IntegerReply(i) => i }
+
+  def executeInt(command: Command with IntegerExpected): Future[Int] =
+    execute(command) map { case IntegerReply(value) => value }
+
 //  def executeBoolean(command: RedisCommand[IntegerReply]): Future[Boolean] = executeAny(command) map { case IntegerReply(0) => false; case IntegerReply(1) => true }
 //  def executeBytes(command: RedisCommand[BulkReply]): Future[Option[ByteString]] = executeAny(command) map { case BulkReply(data) => data }
 //  def executeString(command: RedisCommand[BulkReply]): Future[Option[String]] = executeAny(command) map { case BulkReply(data) => data.map(_.utf8String) }
