@@ -13,7 +13,7 @@ class RedisClientTest extends ActorSystemAcceptanceTest {
   it should "return stored keys" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 4 seconds)
+        implicit val client = new RedisClient(actorSystem, serverAddress, 4 seconds, 3)
 
         val retrieved = for {
           s <- SET(Key("A key"), ByteString("A value")).execute

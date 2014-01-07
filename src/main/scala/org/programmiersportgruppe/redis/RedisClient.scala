@@ -1,25 +1,23 @@
 package org.programmiersportgruppe.redis
 
 import java.net.InetSocketAddress
-import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.ClassTag
+import scala.concurrent.Future
 import akka.util.{ByteString, Timeout}
 import akka.actor.ActorSystem
+import akka.routing.RoundRobinPool
 
 case class ErrorReplyException(command: Command, reply: ErrorReply)
   extends Exception(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
 
-class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, requestTimeout: Timeout) {
+class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, requestTimeout: Timeout, numberOfConnections: Int) {
   import akka.pattern.ask
   import actorSystem.dispatcher
-  import RedisConnectionActor._
-  import scala.concurrent.duration._
 
   implicit val timeout = requestTimeout
 
-  val connectionActor = actorSystem.actorOf(RedisConnectionActor.props(serverAddress), "redis-connection")
+  val routerActor = actorSystem.actorOf(RoundRobinPool(numberOfConnections).props(RedisConnectionActor.props(serverAddress)), "redis-connection-pool")
 
-  def execute(command: Command): Future[Any] = (connectionActor ? command).map {
+  def execute(command: Command): Future[Any] = (routerActor ? command).map {
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
     case (`command`, reply) => reply
   }
