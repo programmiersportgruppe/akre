@@ -19,15 +19,6 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
 
   val connectionActor = actorSystem.actorOf(RedisConnectionActor.props(serverAddress), "redis-connection")
 
-  def waitForConnection {
-    scala.concurrent.Await.result(
-      connectionActor ? WaitForConnection,
-      5 seconds
-    )
-  }
-
-  waitForConnection
-
   def execute(command: Command): Future[Any] = (connectionActor ? command).map {
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
     case (`command`, reply) => reply

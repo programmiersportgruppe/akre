@@ -3,28 +3,22 @@ package org.programmiersportgruppe.redis
 import java.net.InetSocketAddress
 import scala.collection.mutable
 
-import akka.actor.{ActorRef, Actor, Props}
+import akka.actor.{Stash, ActorRef, Actor, Props}
 import akka.io.{Tcp, IO}
 import akka.event.Logging
-import org.programmiersportgruppe.redis.RedisConnectionActor.{UnableToConnectException, Connected, WaitForConnection}
-import akka.actor.Status.Failure
 
 object RedisConnectionActor {
-  object WaitForConnection
-  object Connected
-
   case class UnableToConnectException(connectMessage: Tcp.Connect) extends RuntimeException("Unable to connect as requested by " + connectMessage)
   case class NotReadyException(command: Command) extends RuntimeException("Received command before connected: " + command)
 
   def props(remote: InetSocketAddress) = Props(classOf[RedisConnectionActor], remote)
 }
 
-class RedisConnectionActor(remote: InetSocketAddress) extends Actor {
+class RedisConnectionActor(remote: InetSocketAddress) extends Actor with Stash {
   import RedisConnectionActor._
 
   val log = Logging(context.system, this)
 
-  val waitingForStatus = mutable.Queue[ActorRef]()
   val pendingCommands = mutable.Queue[(ActorRef, Command)]()
   var replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
@@ -39,19 +33,15 @@ class RedisConnectionActor(remote: InetSocketAddress) extends Actor {
       context stop self
 
     case command: Command =>
-      sender ! Failure(new NotReadyException(command))
-      log.error("Received command before connected, from {}: {}", sender, command)
-
-    case WaitForConnection => waitingForStatus enqueue sender
+      stash()
 
     case c @ Tcp.Connected(remote, local) =>
       //            listener ! c
       val connection = sender
       connection ! Tcp.Register(self)
       log.info("Connected to {} and ready to accept commands", remote)
-      waitingForStatus.foreach(s => s ! Connected)
+      unstashAll()
       context become {
-        case WaitForConnection => sender ! Connected
         case command: Command =>
           log.info("Received command {}", command)
           pendingCommands.enqueue(sender -> command)
