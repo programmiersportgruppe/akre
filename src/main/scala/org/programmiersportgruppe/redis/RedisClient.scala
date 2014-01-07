@@ -1,10 +1,14 @@
 package org.programmiersportgruppe.redis
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
-import akka.util.{ByteString, Timeout}
+import scala.concurrent.duration.FiniteDuration
+
 import akka.actor.ActorSystem
 import akka.routing.RoundRobinPool
+import akka.util.{ByteString, Timeout}
+
 
 case class ErrorReplyException(command: Command, reply: ErrorReply)
   extends Exception(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
@@ -32,6 +36,10 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
 
   def executeLong(command: Command with IntegerExpected): Future[Long] =
     execute(command) map { case IntegerReply(value) => value }
+
+  def shutdown(): Future[Boolean] = {
+    akka.pattern.gracefulStop(routerActor, FiniteDuration(5, TimeUnit.SECONDS))
+  }
 
 //  def executeBoolean(command: RedisCommand[IntegerReply]): Future[Boolean] = executeAny(command) map { case IntegerReply(0) => false; case IntegerReply(1) => true }
 //  def executeBytes(command: RedisCommand[BulkReply]): Future[Option[ByteString]] = executeAny(command) map { case BulkReply(data) => data }
