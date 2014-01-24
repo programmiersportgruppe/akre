@@ -19,7 +19,7 @@ class ActorSystemAcceptanceTest extends Test {
   implicit val executionContext = scala.concurrent.ExecutionContext.global
   implicit val timeout: Timeout = 5.seconds
 
-  def await(awaitable: Awaitable[_]) = Await.result(awaitable, 5 seconds)
+  def await(awaitable: Awaitable[_]) = Await.result(awaitable, 5.seconds)
 
   lazy val redisServerPort = ActorSystemAcceptanceTest.nextRedisServerPort.getAndIncrement
 
@@ -34,7 +34,7 @@ class ActorSystemAcceptanceTest extends Test {
       , "--bind", address.getHostName
       , "--save", ""  // disable saving state to disk
     )).run(ProcessLogger { line =>
-      note("Redis server output: " + line.replaceAll("\r?\n?$", ""))
+      info("Redis server output: " + line.replaceAll("\r?\n?$", ""))
       output.append(line)
       if (line contains "The server is now ready to accept connections")
         serverReady.success()

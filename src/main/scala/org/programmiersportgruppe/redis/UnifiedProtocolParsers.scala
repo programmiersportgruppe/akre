@@ -1,6 +1,8 @@
 package org.programmiersportgruppe.redis
 
+import scala.language.implicitConversions
 import scala.util.parsing.combinator.Parsers
+
 import akka.util.ByteString
 
 

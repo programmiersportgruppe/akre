@@ -6,7 +6,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 import akka.actor.ActorSystem
-import akka.routing.RoundRobinPool
+import akka.routing.RoundRobinRouter
 import akka.util.{ByteString, Timeout}
 
 
@@ -19,7 +19,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
 
   implicit val timeout = requestTimeout
 
-  val routerActor = actorSystem.actorOf(RoundRobinPool(numberOfConnections).props(RedisConnectionActor.props(serverAddress)), "redis-connection-pool")
+  val routerActor = actorSystem.actorOf(RedisConnectionActor.props(serverAddress).withRouter(RoundRobinRouter(numberOfConnections)), "redis-connection-pool")
 
   def execute(command: Command): Future[Any] = (routerActor ? command).map {
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
