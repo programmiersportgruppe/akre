@@ -3,10 +3,10 @@ package org.programmiersportgruppe.redis
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
-import akka.actor.ActorSystem
-import akka.routing.RoundRobinRouter
+import akka.actor.{SupervisorStrategy, OneForOneStrategy, ActorSystem}
+import akka.routing.RoundRobinPool
 import akka.util.{ByteString, Timeout}
 
 
@@ -19,9 +19,9 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
 
   implicit val timeout = requestTimeout
 
-  val routerActor = actorSystem.actorOf(RedisConnectionActor.props(serverAddress).withRouter(RoundRobinRouter(numberOfConnections)), "redis-connection-pool")
+  val poolActor = actorSystem.actorOf(RoundRobinPool(3, supervisorStrategy = OneForOneStrategy(3, 5.seconds)(SupervisorStrategy.defaultDecider)).props(RedisConnectionActor.props(serverAddress)), "redis-connection-pool")
 
-  def execute(command: Command): Future[Any] = (routerActor ? command).map {
+  def execute(command: Command): Future[Any] = (poolActor ? command).map {
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
     case (`command`, reply) => reply
   }
@@ -38,7 +38,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
     execute(command) map { case IntegerReply(value) => value }
 
   def shutdown(): Future[Boolean] = {
-    akka.pattern.gracefulStop(routerActor, FiniteDuration(5, TimeUnit.SECONDS))
+    akka.pattern.gracefulStop(poolActor, FiniteDuration(5, TimeUnit.SECONDS))
   }
 
 //  def executeBoolean(command: RedisCommand[IntegerReply]): Future[Boolean] = executeAny(command) map { case IntegerReply(0) => false; case IntegerReply(1) => true }

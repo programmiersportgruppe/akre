@@ -3,6 +3,9 @@ package org.programmiersportgruppe.redis
 import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
 import scala.concurrent.duration._
 import akka.util.ByteString
+import java.net.InetSocketAddress
+import java.util.Date
+import scala.concurrent.Await
 
 
 class RedisClientTest extends ActorSystemAcceptanceTest {
@@ -38,6 +41,21 @@ class RedisClientTest extends ActorSystemAcceptanceTest {
 
         assertResult(1) { await(deleted) }
       }
+    }
+  }
+
+
+  it should "not hang forever on construction when unable to reach the server" in {
+    withActorSystem { actorSystem =>
+      implicit val client = new RedisClient(actorSystem, new InetSocketAddress("localhost", 1), 4.seconds, 3)
+
+      val deadline = 7.seconds.fromNow
+      val set = for {
+        s <- SET(Key("A key"), ByteString("A value")).execute
+      } yield s
+
+      Await.ready(set, 8.seconds)
+      assert(deadline.hasTimeLeft())
     }
   }
 
