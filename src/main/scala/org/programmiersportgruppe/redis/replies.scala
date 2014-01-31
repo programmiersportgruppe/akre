@@ -4,9 +4,10 @@ import akka.util.ByteString
 
 
 sealed abstract class Reply
-
-case class StatusReply(status: String) extends Reply
 case class ErrorReply(error: String) extends Reply
-case class IntegerReply(value: Long) extends Reply
-case class BulkReply(data: Option[ByteString]) extends Reply
-case class MultiBulkReply(replies: Seq[Reply]) extends Reply
+
+sealed abstract class ProperReply extends Reply
+case class StatusReply(status: String) extends ProperReply
+case class IntegerReply(value: Long) extends ProperReply
+case class BulkReply(data: Option[ByteString]) extends ProperReply
+case class MultiBulkReply(replies: Seq[Reply]) extends ProperReply

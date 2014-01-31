@@ -43,7 +43,7 @@ class RedisConnectionActor(remote: InetSocketAddress) extends Actor with Stash {
       unstashAll()
       context become {
         case command: Command =>
-          log.info("Received command {}", command)
+          log.debug("Received command {}", command)
           pendingCommands.enqueue(sender -> command)
           connection ! Tcp.Write(command.serialised)
         case Tcp.CommandFailed(w: Tcp.Write) =>
