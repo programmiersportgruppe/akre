@@ -8,7 +8,7 @@ scalaVersion := "2.10.3"
 
 crossScalaVersions := Seq("2.10.3", "2.11.0-M7")
 
-scalacOptions := Seq("-feature", "-deprecation")
+scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
 
 publishTo := Some(Resolver.file("published", new File("target/published")))
 

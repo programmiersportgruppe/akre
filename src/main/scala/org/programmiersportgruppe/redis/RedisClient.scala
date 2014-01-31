@@ -12,6 +12,10 @@ import akka.util.{ByteString, Timeout}
 case class ErrorReplyException(command: Command, reply: ErrorReply)
   extends Exception(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
 
+case class UnexpectedReplyException(command: Command, reply: ProperReply)
+  extends Exception(s"Unexpected reply received: ${reply}\nFor command: $command")
+
+
 class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
   import akka.pattern.ask
   import actorSystem.dispatcher
@@ -36,7 +40,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
    * @param command the command to be executed
    * @return a non-error reply from the server
    * @throws ErrorReplyException if the server gives an error reply
-   * @throws AskTimeoutException if the connection pool fails to respond within the requestTimeout
+   * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
    */
   def execute(command: Command): Future[ProperReply] = (poolActor ? command).map {
     case (`command`, r: ProperReply) => r
@@ -47,36 +51,45 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
    * Executes a command and extracts an optional [[akka.util.ByteString]] from the bulk reply that is expected.
    *
    * @param command the bulk reply command to be executed
-   * @throws ErrorReplyException if the server gives an error reply
-   * @throws MatchError          if the server gives a proper non-bulk reply
-   * @throws AskTimeoutException if the connection pool fails to respond within the requestTimeout
+   * @throws ErrorReplyException      if the server gives an error reply
+   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
+   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
    */
   def executeByteString(command: Command with BulkExpected): Future[Option[ByteString]] =
-    execute(command) map { case BulkReply(data) => data }
+    execute(command) map {
+      case BulkReply(data)  => data
+      case reply            => throw new UnexpectedReplyException(command, reply)
+    }
 
   /**
    * Executes a command and extracts an optional [[scala.Predef.String]] from the UTF-8 encoded bulk reply that is
    * expected.
    *
    * @param command the bulk reply command to be executed
-   * @throws ???                 if the reply cannot be decoded as UTF-8
-   * @throws ErrorReplyException if the server gives an error reply
-   * @throws MatchError          if the server gives a proper non-bulk reply
-   * @throws AskTimeoutException if the connection pool fails to respond within the requestTimeout
+   * @throws ???                      if the reply cannot be decoded as UTF-8
+   * @throws ErrorReplyException      if the server gives an error reply
+   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
+   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
    */
   def executeString(command: Command with BulkExpected): Future[Option[String]] =
-    execute(command) map { case BulkReply(data) => data.map(_.utf8String) }
+    execute(command) map {
+      case BulkReply(data)  => data.map(_.utf8String)
+      case reply            => throw new UnexpectedReplyException(command, reply)
+    }
 
   /**
    * Executes a command and extracts a [[scala.Long]] from the int reply that is expected.
    *
    * @param command the int reply command to be executed
-   * @throws ErrorReplyException if the server gives an error reply
-   * @throws MatchError          if the server gives a proper non-int reply
-   * @throws AskTimeoutException if the connection pool fails to respond within the requestTimeout
+   * @throws ErrorReplyException      if the server gives an error reply
+   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
+   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
    */
   def executeLong(command: Command with IntegerExpected): Future[Long] =
-    execute(command) map { case IntegerReply(value) => value }
+    execute(command) map {
+      case IntegerReply(value)  => value
+      case reply                => throw new UnexpectedReplyException(command, reply)
+    }
 
   /**
    * Stops the connection pool used by the client.
