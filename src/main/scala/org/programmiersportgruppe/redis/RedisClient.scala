@@ -48,7 +48,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
   }
 
   /**
-   * Executes a command and extracts an optional [[akka.util.ByteString]] from the bulk reply that is expected.
+   * Executes a command and extracts an optional akka.util.ByteString from the bulk reply that is expected.
    *
    * @param command the bulk reply command to be executed
    * @throws ErrorReplyException      if the server gives an error reply
@@ -62,7 +62,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
     }
 
   /**
-   * Executes a command and extracts an optional [[scala.Predef.String]] from the UTF-8 encoded bulk reply that is
+   * Executes a command and extracts an optional String from the UTF-8 encoded bulk reply that is
    * expected.
    *
    * @param command the bulk reply command to be executed
@@ -78,7 +78,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
     }
 
   /**
-   * Executes a command and extracts a [[scala.Long]] from the int reply that is expected.
+   * Executes a command and extracts a Long from the int reply that is expected.
    *
    * @param command the int reply command to be executed
    * @throws ErrorReplyException      if the server gives an error reply
