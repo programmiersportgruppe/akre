@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import akka.actor.{SupervisorStrategy, OneForOneStrategy, ActorSystem}
+import akka.actor.{ActorRefFactory, SupervisorStrategy, OneForOneStrategy, ActorSystem}
 import akka.routing.RoundRobinPool
 import akka.util.{ByteString, Timeout}
 
@@ -16,9 +16,9 @@ case class UnexpectedReplyException(command: Command, reply: ProperReply)
   extends Exception(s"Unexpected reply received: ${reply}\nFor command: $command")
 
 
-class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
   import akka.pattern.ask
-  import actorSystem.dispatcher
+  import actorRefFactory.dispatcher
 
   implicit private val timeout = requestTimeout
 
@@ -31,7 +31,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
       supervisorStrategy = OneForOneStrategy(3, 5.seconds)(SupervisorStrategy.defaultDecider)
     ).props(connection)
 
-    actorSystem.actorOf(pool, poolName)
+    actorRefFactory.actorOf(pool, poolName)
   }
 
   /**
