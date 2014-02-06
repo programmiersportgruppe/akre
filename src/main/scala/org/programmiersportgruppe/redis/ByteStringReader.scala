@@ -11,8 +11,8 @@ import akka.util.ByteString
 //  protected def lineContents: String = ???
 //}
 
-class ByteStringReader(byteString: ByteString, offset: Int) extends Reader[Byte] {
-  assert(offset <= byteString.length)
+case class ByteStringReader(byteString: ByteString, override val offset: Int) extends Reader[Byte] {
+  assert(offset <= byteString.length, s"Offset ($offset) must be less than or equal to string length (${byteString.length})")
 
   override def atEnd = offset == byteString.length
   override def first = byteString(offset)
@@ -20,9 +20,12 @@ class ByteStringReader(byteString: ByteString, offset: Int) extends Reader[Byte]
 //  override def pos = ByteStringOffsetPosition(byteString, offset)
   override def rest = new ByteStringReader(byteString, offset + 1)
 
-  def extract(count: Int): (ByteString, ByteStringReader) = {
+  def extract(count: Int): (Option[ByteString], ByteStringReader) = {
     val newOffset = offset + count
-    byteString.slice(offset, newOffset) -> new ByteStringReader(byteString, newOffset)
+    if (newOffset < byteString.length)
+      Some(byteString.slice(offset, newOffset)) -> new ByteStringReader(byteString, newOffset)
+    else
+      None -> this
   }
 
   def asByteString = byteString.drop(offset)

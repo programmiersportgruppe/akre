@@ -17,9 +17,12 @@ trait UnifiedProtocolParsers extends Parsers {
   //            data(i) = nextIn.first
   //            nextIn = nextIn.rest
   //        }
-  //        Success(data, nextIn)
+  //        Success(ByteString(data), nextIn)
     val (bytes, remainder) = in.asInstanceOf[ByteStringReader].extract(n)
-    Success(bytes, remainder)
+    bytes match {
+      case Some(data) => Success(data, remainder)
+      case None => Failure(UnifiedProtocolParsers.EndOfInputFailureString, remainder)
+    }
   }
 
   implicit def stringLiteral(literal: String): Parser[String] = accept(literal.getBytes("UTF-8").toList) ^^^ literal
@@ -41,4 +44,8 @@ trait UnifiedProtocolParsers extends Parsers {
     case size => bytes(size.toInt) <~ newline ^^ Some.apply
   }) ^^ BulkReply
   def multiBulkReply: Parser[MultiBulkReply] = ("*" ~> commit(terminatedInteger)).flatMap(n => repN(n.toInt, reply)) ^^ MultiBulkReply
+}
+
+object UnifiedProtocolParsers {
+  val EndOfInputFailureString = "end of input"
 }
