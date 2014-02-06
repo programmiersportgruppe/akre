@@ -27,7 +27,7 @@ class RedisClient(actorSystem: ActorSystem, serverAddress: InetSocketAddress, re
     val connection = RedisConnectionActor.props(serverAddress)
 
     val pool = RoundRobinPool(
-      nrOfInstances = 3,
+      nrOfInstances = numberOfConnections,
       supervisorStrategy = OneForOneStrategy(3, 5.seconds)(SupervisorStrategy.defaultDecider)
     ).props(connection)
 
