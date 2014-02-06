@@ -1,11 +1,13 @@
 package org.programmiersportgruppe.redis
 
-import org.scalatest.FunSuite
 import akka.util.ByteString
+import org.programmiersportgruppe.redis.test.Test
 
-class ByteStringReaderTest extends FunSuite {
+class ByteStringReaderTest extends Test {
 
-  test("Can extract prefix of a given length") {
+  behavior of "a byte string reader"
+
+  it can "extract prefix of a given length" in {
     val byteString = ByteString("This is a string")
     val reader = new ByteStringReader(byteString, 0)
 
@@ -15,7 +17,7 @@ class ByteStringReaderTest extends FunSuite {
     assertResult(new ByteStringReader(byteString, 10))(remainder)
   }
 
-  test("Gives none when trying to extract more bytes than available") {
+  it should "give None when trying to extract more bytes than available" in {
     val byteString = ByteString("This is a string")
     val reader = new ByteStringReader(byteString, 0)
 
