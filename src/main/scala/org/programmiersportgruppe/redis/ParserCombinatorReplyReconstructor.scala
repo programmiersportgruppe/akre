@@ -12,9 +12,8 @@ class ParserCombinatorReplyReconstructor extends ReplyReconstructor with Unified
       case Success(reply, remainder) =>
         buffer = remainder.asInstanceOf[ByteStringReader].asByteString
         Some(reply)
-      case Failure(UnifiedProtocolParsers.EndOfInputFailureString, _) => None
-      case f: Failure => throw new RuntimeException("Unexpected parse failure: " + f + "\nUnconsumed input: " + f.next.asInstanceOf[ByteStringReader].asByteString)
-      case e: Error => throw new RuntimeException("Parse error: " + e)
+      case NoSuccess(UnifiedProtocolParsers.EndOfInputFailureString, _) => None
+      case f @ NoSuccess(_, _) => throw new RuntimeException("Unexpected parse failure: " + f + "\nUnconsumed input: " + f.next.asInstanceOf[ByteStringReader].asByteString)
     }
   }
 
