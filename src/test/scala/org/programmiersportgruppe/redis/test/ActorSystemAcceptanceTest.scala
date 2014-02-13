@@ -62,7 +62,7 @@ class ActorSystemAcceptanceTest extends Test {
         actor.debug.unhandled = on
       }
       deque-dispatcher {
-         type = Dispatcher
+        type = Dispatcher
       }
       """
     ))
