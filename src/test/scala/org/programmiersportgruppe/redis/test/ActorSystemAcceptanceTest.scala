@@ -37,7 +37,7 @@ class ActorSystemAcceptanceTest extends Test {
       info("Redis server output: " + line.replaceAll("\r?\n?$", ""))
       output.append(line)
       if (line contains "The server is now ready to accept connections")
-        serverReady.success()
+        serverReady.success(())
     })
     try {
       serverReady.tryCompleteWith(Future {
