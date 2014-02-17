@@ -2,7 +2,7 @@ name := "akre"
 
 organization := "org.programmiersportgruppe"
 
-version := "0.3.1"
+version := "0.3.2"
 
 scalaVersion := "2.11.0-M8"
 
@@ -21,7 +21,7 @@ libraryDependencies <++= scalaVersion {
 
 libraryDependencies <+= scalaVersion {
   case "2.11.0-M7" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC1" + scala211CustomBuildSuffix)
-  case "2.11.0-M8" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC2" + scala211CustomBuildSuffix)
+  case "2.11.0-M8" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC3" + scala211CustomBuildSuffix)
   case _           => "com.typesafe.akka" %% "akka-actor" % "2.3.0-RC1"
 }
 
