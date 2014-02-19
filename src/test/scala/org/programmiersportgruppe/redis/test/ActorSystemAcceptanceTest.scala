@@ -1,6 +1,6 @@
 package org.programmiersportgruppe.redis.test
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.{Promise, Future, Await, Awaitable}
 import scala.concurrent.duration._
 
@@ -24,14 +24,14 @@ class ActorSystemAcceptanceTest extends Test {
   lazy val redisServerPort = ActorSystemAcceptanceTest.nextRedisServerPort.getAndIncrement
 
   def withRedisServer(testCode: InetSocketAddress => Any) {
-    val address = new InetSocketAddress("localhost", redisServerPort)
+    val address = new InetSocketAddress(InetAddress.getLoopbackAddress, redisServerPort)
 
     val output = new StringBuilder
     val serverReady = Promise[Unit]()
 
     val server = sys.process.Process(Seq("/usr/local/bin/redis-server"
       , "--port", address.getPort.toString
-      , "--bind", address.getHostName
+      , "--bind", address.getAddress.getHostAddress
       , "--save", ""  // disable saving state to disk
     )).run(ProcessLogger { line =>
       info("Redis server output: " + line.replaceAll("\r?\n?$", ""))

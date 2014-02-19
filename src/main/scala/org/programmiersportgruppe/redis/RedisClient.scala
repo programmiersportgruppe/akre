@@ -1,22 +1,28 @@
 package org.programmiersportgruppe.redis
 
 import java.net.InetSocketAddress
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
 
-import akka.actor.{ActorRefFactory, SupervisorStrategy, OneForOneStrategy, ActorSystem}
-import akka.routing.RoundRobinPool
+import akka.actor.ActorRefFactory
+import akka.routing._
 import akka.util.{ByteString, Timeout}
 
 
+class RedisClientException(message: String, cause: Throwable) extends Exception(message, cause) {
+  def this(message: String) = this(message, null)
+}
+
 case class ErrorReplyException(command: Command, reply: ErrorReply)
-  extends Exception(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
+  extends RedisClientException(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
 
 case class UnexpectedReplyException(command: Command, reply: ProperReply)
-  extends Exception(s"Unexpected reply received: ${reply}\nFor command: $command")
+  extends RedisClientException(s"Unexpected reply received: ${reply}\nFor command: $command")
+
+case class RequestExecutionException(message: String, cause: Throwable) extends RedisClientException(message, cause)
 
 
-class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
   import akka.pattern.ask
   import actorRefFactory.dispatcher
 
@@ -24,14 +30,33 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
 
   private val poolActor = {
 
-    val connection = RedisConnectionActor.props(serverAddress)
+    val connection = RedisConnectionActor.props(serverAddress, Some(Ready))
 
-    val pool = RoundRobinPool(
-      nrOfInstances = numberOfConnections,
-      supervisorStrategy = OneForOneStrategy(3, 5.seconds)(SupervisorStrategy.defaultDecider)
-    ).props(connection)
+    val pool = ResilientPool.props(
+      childProps = connection,
+      size = numberOfConnections,
+      creationCircuitBreakerLogic = new CircuitBreakerLogic(
+        consecutiveFailureTolerance = 2,
+        openPeriods = OpenPeriodStrategy.doubling(100.milliseconds, 1.minute),
+        halfOpenTimeout = connectTimeout
+      ),
+      routingLogic = RoundRobinRoutingLogic()
+    )
 
     actorRefFactory.actorOf(pool, poolName)
+  }
+
+  def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1) {
+    require(minConnections <= numberOfConnections)
+    val deadline = timeout.fromNow
+    while(deadline.timeLeft match {
+      case remaining if remaining > Duration.Zero =>
+        Await.result(poolActor.ask(GetRoutees)(deadline.timeLeft), timeout) match {
+          case Routees(routees) => routees.length < minConnections
+        }
+      case _ => throw new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections")
+    })
+      Thread.sleep(30)
   }
 
   /**
@@ -42,10 +67,25 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    * @throws ErrorReplyException if the server gives an error reply
    * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
    */
-  def execute(command: Command): Future[ProperReply] = (poolActor ? command).map {
+  def execute(command: Command): Future[ProperReply] = (poolActor ? command).transform({
     case (`command`, r: ProperReply) => r
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
-  }
+  }, {
+    case e: Throwable => new RequestExecutionException(s"Error while executing command [$command]: ${e.getMessage}", e)
+  })
+
+  /**
+   * Executes a command that is expected to cause the server to close the connection.
+   *
+   * @param command the command to be executed
+   * @return a unit future that completes when the connection closes
+   * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
+   */
+  def executeConnectionClose(command: Command with ConnectionCloseExpected): Future[Unit] = (poolActor ? command).transform({
+    case () => ()
+  }, {
+    case e: Throwable => new RequestExecutionException(s"Error while executing command [$command]: ${e.getMessage}", e)
+  })
 
   /**
    * Executes a command and extracts an optional akka.util.ByteString from the bulk reply that is expected.
@@ -89,6 +129,20 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     execute(command) map {
       case IntegerReply(value)  => value
       case reply                => throw new UnexpectedReplyException(command, reply)
+    }
+
+  /**
+   * Executes a command and verifies that it gets an "OK" status reply.
+   *
+   * @param command the ok status reply command to be executed
+   * @throws ErrorReplyException      if the server gives an error reply
+   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
+   * @throws UnexpectedReplyException if the server gives a proper reply that is not StatusReply("OK")
+   */
+  def executeSuccessfully(command: Command with OkStatusExpected): Future[Unit] =
+    execute(command) map {
+      case StatusReply("OK")  => ()
+      case reply              => throw new UnexpectedReplyException(command, reply)
     }
 
   /**

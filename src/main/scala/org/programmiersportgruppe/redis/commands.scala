@@ -5,7 +5,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 sealed trait CommandArgument { val toByteString: ByteString }
-case class Key(key: ByteString) extends CommandArgument { override lazy val toByteString = key }
+case class Key(key: ByteString) extends CommandArgument {
+  override lazy val toByteString = key
+  override def toString = s"Key(${key.utf8String})"
+}
 object Key { def apply(key: String) = new Key(ByteString(key)) }
 case class RByteString(value: ByteString) extends CommandArgument { override lazy val toByteString = value }
 case class RString(value: String) extends CommandArgument { override lazy val toByteString = ByteString(value) }
@@ -47,7 +50,14 @@ trait IntegerExpected {
   self: Command =>
   def executeLong(implicit client: RedisClient): Future[Long] = client.executeLong(this)
 }
-
+trait OkStatusExpected {
+  self: Command =>
+  def executeSuccessfully(implicit client: RedisClient): Future[Unit] = client.executeSuccessfully(this)
+}
+trait ConnectionCloseExpected {
+  self: Command =>
+  def executeConnectionClose(implicit client: RedisClient): Future[Unit] = client.executeConnectionClose(this)
+}
 trait BooleanIntegerExpected
 
 //sealed abstract class IntCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[IntegerReply](args)
@@ -73,8 +83,15 @@ case object OnlyIfKeyAlreadyExists extends CreationRestriction("XX")
 
 case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends NamedCommand(Seq(key, RByteString(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
 
+// Server
+sealed abstract class PersistenceModifier(flag: String) { val arg = RString(flag) }
+case object Save extends PersistenceModifier("SAVE")
+case object NoSave extends PersistenceModifier("NOSAVE")
+
+case class SHUTDOWN(forcePersistence: Option[PersistenceModifier] = None) extends NamedCommand(forcePersistence.map(_.arg).toSeq: _*) with ConnectionCloseExpected
 
 
+// Transactions
 case class Multi(command1: Command, command2: Command, additionalCommands: Command*)
 
 trait OptimisticTransactionContinuation

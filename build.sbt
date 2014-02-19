@@ -2,7 +2,7 @@ name := "akre"
 
 organization := "org.programmiersportgruppe"
 
-version := "0.3.2"
+version := "0.4.0"
 
 scalaVersion := "2.11.0-M8"
 
@@ -15,8 +15,8 @@ publishTo := Some(Resolver.file("published", new File("target/published")))
 lazy val scala211CustomBuildSuffix = System.getProperty("scala-2.11.0-custom-build-suffix", "")
 
 libraryDependencies <++= scalaVersion {
-  case sv if sv startsWith "2.11." => Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.0-RC5")
-  case _                           => Nil
+  case v if v startsWith "2.11." => Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.0-RC5")
+  case _                         => Nil
 }
 
 libraryDependencies <+= scalaVersion {
@@ -34,4 +34,10 @@ libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.2.0" % "test" 
   case "2.11.0-M8" => "2.11.0-M3"
   case "2.11.0-M7" => "2.11.0-M3"
   case v => v
+}
+
+// To make IntelliJ's test runner happy
+libraryDependencies <++= scalaVersion {
+  case v if v startsWith "2.11." => Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7")
+  case _                         => Nil
 }

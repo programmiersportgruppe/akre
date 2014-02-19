@@ -5,7 +5,9 @@ import scala.concurrent.duration._
 import akka.util.ByteString
 import java.net.InetSocketAddress
 import java.util.Date
-import scala.concurrent.Await
+import scala.concurrent.{TimeoutException, Await}
+import akka.pattern.AskTimeoutException
+import scala.util.Failure
 
 
 class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
@@ -16,7 +18,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "return stored keys" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 4.seconds, 3)
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        client.waitUntilConnected(5.seconds)
 
         val retrieved = for {
           s <- SET(Key("A key"), ByteString("A value")).execute
@@ -32,7 +35,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "delete stored keys" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 4.seconds, 3)
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        client.waitUntilConnected(5.seconds)
 
         val deleted = for {
           s <- SET(Key("A key"), ByteString("A value")).execute
@@ -47,15 +51,71 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "not hang forever on construction when unable to reach the server" in {
     withActorSystem { actorSystem =>
-      implicit val client = new RedisClient(actorSystem, new InetSocketAddress("localhost", 1), 4.seconds, 3)
+      implicit val client = within(100.milliseconds) {
+        new RedisClient(actorSystem, new InetSocketAddress("localhost", 1), 1.second, 3.seconds, 1)
+      }
+      intercept[TimeoutException] {
+        client.waitUntilConnected(1.second)
+      }
 
-      val deadline = 7.seconds.fromNow
-      val set = for {
-        s <- SET(Key("A key"), ByteString("A value")).execute
-      } yield s
+      val setCommand = SET(Key("A key"), ByteString("A value"))
+      val future = setCommand.execute
+      Await.ready(future, 2.seconds)
 
-      Await.ready(set, 8.seconds)
-      assert(deadline.hasTimeLeft())
+      val Some(Failure(e: RequestExecutionException)) = future.value
+      e.cause shouldBe EmptyPoolException(setCommand)
+    }
+  }
+
+
+  it should "recover from the server going down abruptly" in {
+    withActorSystem { actorSystem =>
+      implicit var client: RedisClient = null
+
+      withRedisServer { serverAddress =>
+        client = new RedisClient(actorSystem, serverAddress, 1.second, 3.seconds, 1)
+        client.waitUntilConnected(1.second)
+
+        assertResult(StatusReply("OK")) {
+          await(SET(Key("A key"), ByteString(1)).execute)
+        }
+      }
+
+      intercept[RequestExecutionException] {
+        await(SET(Key("A key"), ByteString(2)).execute)
+      }
+
+      withRedisServer { serverAddress =>
+        client.waitUntilConnected(1.second)
+
+        assertResult(StatusReply("OK")) {
+          await(SET(Key("A key"), ByteString(4)).execute)
+        }
+      }
+    }
+  }
+
+
+  it should "recover from the server going down nicely" in {
+    withActorSystem { actorSystem =>
+      implicit var client: RedisClient = null
+
+      withRedisServer { serverAddress =>
+        client = new RedisClient(actorSystem, serverAddress, 50.milliseconds, 3.seconds, 1)
+        client.waitUntilConnected(1.second)
+
+        intercept[RequestExecutionException] {
+          await(SHUTDOWN().executeConnectionClose)
+        }
+      }
+
+      withRedisServer { serverAddress =>
+//        client.waitUntilConnected(5.seconds)
+
+        assertResult(StatusReply("OK")) {
+          await(SET(Key("A key"), ByteString(4)).execute)
+        }
+      }
     }
   }
 
