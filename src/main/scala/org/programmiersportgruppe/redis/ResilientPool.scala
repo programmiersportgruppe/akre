@@ -106,8 +106,9 @@ class ResilientPool(childProps: Props,
     priorStatus.isDefined
   }
 
-  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
+  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy(loggingEnabled = false) {
     case e: Exception =>
+      log.warning("Worker {} failed with {}: {}", sender(), e.getClass.getSimpleName, e.getMessage)
       deactivateWorker(sender())
       Stop
   }

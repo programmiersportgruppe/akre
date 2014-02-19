@@ -61,9 +61,6 @@ class ActorSystemAcceptanceTest extends Test {
         log-dead-letters = 100
         actor.debug.unhandled = on
       }
-      deque-dispatcher {
-        type = Dispatcher
-      }
       """
     ))
     try {

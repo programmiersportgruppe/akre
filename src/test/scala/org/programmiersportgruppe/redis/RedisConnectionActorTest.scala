@@ -1,10 +1,10 @@
 package org.programmiersportgruppe.redis
 
 import akka.pattern.ask
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestKit}
+import akka.util.ByteString
 
 import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
-import akka.util.ByteString
 
 
 class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
@@ -14,7 +14,9 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
   it should "persist keys to the database" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val ref = TestActorRef(RedisConnectionActor.props(address).withDispatcher("deque-dispatcher"))
+        val kit = new TestKit(system)
+        val ref = TestActorRef(RedisConnectionActor.props(address, Some("ready")), kit.testActor, "SOT")
+        kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
         assertResult(set -> StatusReply("OK")) {
@@ -32,7 +34,9 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
   it should "handle receiving multiple commands at once" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val ref = TestActorRef(RedisConnectionActor.props(address).withDispatcher("deque-dispatcher"))
+        val kit = new TestKit(system)
+        val ref = TestActorRef(RedisConnectionActor.props(address, Some("ready")), kit.testActor, "SOT")
+        kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
         val get = GET(Key("foo"))
