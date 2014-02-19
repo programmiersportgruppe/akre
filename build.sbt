@@ -6,7 +6,7 @@ version := "0.4.1"
 
 scalaVersion := "2.11.0-M8"
 
-crossScalaVersions := Seq("2.10.3", "2.11.0-M7", "2.11.0-M8")
+crossScalaVersions := Seq("2.10.3", "2.11.0-M8")
 
 scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
 
@@ -20,9 +20,8 @@ libraryDependencies <++= scalaVersion {
 }
 
 libraryDependencies <+= scalaVersion {
-  case "2.11.0-M7" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC1" + scala211CustomBuildSuffix)
   case "2.11.0-M8" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC3" + scala211CustomBuildSuffix)
-  case _           => "com.typesafe.akka" %% "akka-actor" % "2.3.0-RC1"
+  case _           => "com.typesafe.akka" %% "akka-actor" % "2.3.0-RC3"
 }
 
 libraryDependencies <+= scalaVersion {
@@ -30,10 +29,9 @@ libraryDependencies <+= scalaVersion {
   case _           => "org.scalatest" %% "scalatest" % "2.0.1-SNAP4" % "test" intransitive()
 }
 
-libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.2.0" % "test" intransitive() cross CrossVersion.binaryMapped {
-  case "2.11.0-M8" => "2.11.0-M3"
-  case "2.11.0-M7" => "2.11.0-M3"
-  case v => v
+libraryDependencies <+= scalaVersion {
+  case "2.11.0-M8" => "com.typesafe.akka" %% "akka-testkit" % ("2.3.0-RC3" + scala211CustomBuildSuffix)
+  case _           => "com.typesafe.akka" %% "akka-testkit" % "2.3.0-RC3"
 }
 
 // To make IntelliJ's test runner happy
