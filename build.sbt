@@ -1,41 +1,51 @@
-name := "akre"
-
-organization := "org.programmiersportgruppe"
-
-version := "0.4.1"
-
-scalaVersion := "2.11.0-M8"
-
-crossScalaVersions := Seq("2.10.3", "2.11.0-M8")
-
-scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
-
-publishTo := Some(Resolver.file("published", new File("target/published")))
 
 lazy val scala211CustomBuildSuffix = System.getProperty("scala-2.11.0-custom-build-suffix", "")
 
-libraryDependencies <++= scalaVersion {
-  case v if v startsWith "2.11." => Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.0-RC5")
-  case _                         => Nil
-}
+lazy val customBuildSuffix = Def.setting(if (scalaVersion.value startsWith "2.11.0") scala211CustomBuildSuffix else "")
 
-libraryDependencies <+= scalaVersion {
-  case "2.11.0-M8" => "com.typesafe.akka" %% "akka-actor" % ("2.3.0-RC3" + scala211CustomBuildSuffix)
-  case _           => "com.typesafe.akka" %% "akka-actor" % "2.3.0-RC3"
-}
 
-libraryDependencies <+= scalaVersion {
-  case "2.11.0-M8" => "org.scalatest" %% "scalatest" % "2.1.0-RC2" % "test" intransitive()
-  case _           => "org.scalatest" %% "scalatest" % "2.0.1-SNAP4" % "test" intransitive()
-}
 
-libraryDependencies <+= scalaVersion {
-  case "2.11.0-M8" => "com.typesafe.akka" %% "akka-testkit" % ("2.3.0-RC3" + scala211CustomBuildSuffix)
-  case _           => "com.typesafe.akka" %% "akka-testkit" % "2.3.0-RC3"
-}
+name := "akre"
+
+version := "0.4.1" + customBuildSuffix.value
+
+description := "A Redis client for Scala, implemented using Akka."
+
+organization := "org.programmiersportgruppe"
+
+
+
+scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
+
+crossScalaVersions := Seq("2.11.0-M8", "2.10.3", "2.10.4-RC2")
+
+scalaVersion := crossScalaVersions.value.head
+
+
+
+conflictManager := ConflictManager.strict
+
+dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value
+
+
+
+lazy val akkaVersion = Def.setting("2.3.0-RC3" + customBuildSuffix.value)
+
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % akkaVersion.value
+
+libraryDependencies ++= (
+  if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.0-RC5")
+  else Nil
+)
+
+
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.0-RC2" % "test"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test"
 
 // To make IntelliJ's test runner happy
-libraryDependencies <++= scalaVersion {
-  case v if v startsWith "2.11." => Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7")
-  case _                         => Nil
-}
+libraryDependencies ++= (
+  if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7" % "test")
+  else Nil
+)
