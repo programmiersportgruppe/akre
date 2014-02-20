@@ -51,7 +51,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     val deadline = timeout.fromNow
     while(deadline.timeLeft match {
       case remaining if remaining > Duration.Zero =>
-        Await.result(poolActor.ask(GetRoutees)(deadline.timeLeft), timeout) match {
+        Await.result(poolActor.ask(GetRoutees)(remaining), timeout) match {
           case Routees(routees) => routees.length < minConnections
         }
       case _ => throw new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections")
