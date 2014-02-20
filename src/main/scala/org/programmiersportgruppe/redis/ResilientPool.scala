@@ -29,36 +29,44 @@ class ResilientPool(childProps: Props,
   import context.dispatcher
 
   val log = Logging(context.system, this)
+  val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
+  var router: Option[Router] = None
+
+  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerLogic) {
+
+    var scheduledRecruitment: Option[Cancellable] = None
+
+    override def onStateChanged(newState: CircuitBreakerState) {
+      scheduledRecruitment.map(_.cancel())
+      log.debug("Creation circuit breaker has changed to state " + state)
+      scheduledRecruitment = newState match {
+        case ho: creationCircuitBreakerLogic.HalfOpen => recruitAfter(ho.deadline)
+        case o: creationCircuitBreakerLogic.Open => recruitAfter(o.deadline)
+        case c: creationCircuitBreakerLogic.Closed => None
+      }
+    }
+
+    def recruitAfter(deadline: Deadline) = {
+      val timeLeft = deadline.timeLeft
+      if (timeLeft > Duration.Zero) {
+        log.debug("Scheduling recruitment after state change in " + timeLeft)
+        Some(context.system.scheduler.scheduleOnce(timeLeft, self, RecruitWorkers))
+      } else {
+        log.debug("Immediately recruiting as state change can already take place)")
+        recruitWorkers()
+        None
+      }
+    }
+  }
+
+  recruitWorkers()
+
+  case object RecruitWorkers
 
   override def aroundReceive(receive: Actor.Receive, msg: Any): Unit = {
     log.debug("Received {} from {}", msg, sender())
     super.aroundReceive(receive, msg)
   }
-
-  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerLogic) {
-    override def onStateChanged(newState: CircuitBreakerState) {
-      log.debug("Creation circuit breaker has changed to state " + state)
-      (newState match {
-        case ho: creationCircuitBreakerLogic.HalfOpen => Some(ho.deadline)
-        case o: creationCircuitBreakerLogic.Open => Some(o.deadline)
-        case c: creationCircuitBreakerLogic.Closed => None
-      }).map(_.timeLeft match {
-        case remaining if remaining > Duration.Zero =>
-          log.debug("Scheduling recruitment after state change in " + remaining)
-          context.system.scheduler.scheduleOnce(remaining, self, RecruitWorkers)
-        case _ =>
-          log.debug("Immediately recruiting as state change can already take place)")
-          recruitWorkers()
-      })
-    }
-  }
-  val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
-  var router: Option[Router] = None
-
-  case object RecruitWorkers
-
-  recruitWorkers()
-  context.setReceiveTimeout(creationCircuitBreakerLogic.halfOpenTimeout.duration)
 
   def fireTardyWorkers() {
     while (pendingWorkers.headOption.exists(_._2.isOverdue())) {
@@ -119,7 +127,6 @@ class ResilientPool(childProps: Props,
       log.info(s"Worker {} activated (now {} of {})", sender(), activeWorkerCount, size)
     case Terminated(worker) => deactivateWorker(worker)
     case GetRoutees => sender ! Routees(router.fold(scala.collection.immutable.IndexedSeq.empty[Routee])(_.routees))
-    case ReceiveTimeout => recruitWorkers()
     case message if router.exists(_.routees.exists(_ == ActorRefRoutee(sender()))) => log.error("Unexpected message from active worker {}: {}", sender(), message)
     case message if pendingWorkers.exists(_._1 == sender()) => log.error("Unexpected message from pending worker {}: {}", sender(), message)
     case message => router match {
