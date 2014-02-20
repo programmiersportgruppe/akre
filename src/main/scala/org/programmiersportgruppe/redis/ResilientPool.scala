@@ -24,13 +24,11 @@ object ResilientPool {
 class ResilientPool(childProps: Props,
                     size: Int,
                     creationCircuitBreakerLogic: CircuitBreakerLogic,
-                    routingLogic: RoutingLogic) extends Actor with DiagnosticActorLogging {
-
-
+                    routingLogic: RoutingLogic) extends Actor {
 
   import context.dispatcher
 
-//  val log = Logging(context.system, this)
+  val log = Logging(context.system, this)
 
   override def aroundReceive(receive: Actor.Receive, msg: Any): Unit = {
     log.debug("Received {} from {}", msg, sender())
