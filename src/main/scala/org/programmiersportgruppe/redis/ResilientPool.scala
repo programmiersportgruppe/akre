@@ -71,7 +71,7 @@ class ResilientPool(childProps: Props,
   def fireTardyWorkers() {
     while (pendingWorkers.headOption.exists(_._2.isOverdue())) {
       val (worker, _) = pendingWorkers.dequeue()
-      log.warning("Stopping worker {}, which took too long to report ready.")
+      log.warning("Stopping worker {}, which took too long to report ready.", worker)
       context.unwatch(worker)
       context.stop(worker)
     }
