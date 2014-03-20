@@ -6,6 +6,9 @@ import akka.actor._
 import akka.actor.SupervisorStrategy.Stop
 import akka.event.Logging
 import akka.routing._
+import akka.dispatch.{PriorityGenerator, UnboundedPriorityMailbox, RequiresMessageQueue}
+import org.programmiersportgruppe.redis.ResilientPool.RecruitWorkers
+import com.typesafe.config.Config
 
 
 case object Ready
@@ -19,12 +22,27 @@ object ResilientPool {
             creationCircuitBreakerLogic: CircuitBreakerLogic = new CircuitBreakerLogic(2, OpenPeriodStrategy.doubling(1.second, 1.minute), 5.seconds),
             routingLogic: RoutingLogic = RoundRobinRoutingLogic()): Props =
     Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerLogic, routingLogic)
+
+  case object RecruitWorkers
 }
+
+class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
+  extends UnboundedPriorityMailbox(PriorityGenerator {
+    // internal
+    case Ready          => 1
+    case Terminated(_)  => 2
+    case RecruitWorkers => 3
+
+    // external
+    case GetRoutees     => 10
+    case _              => 20
+  })
 
 class ResilientPool(childProps: Props,
                     size: Int,
                     creationCircuitBreakerLogic: CircuitBreakerLogic,
-                    routingLogic: RoutingLogic) extends Actor {
+                    routingLogic: RoutingLogic)
+  extends Actor with RequiresMessageQueue[UnboundedPriorityMailbox.MessageQueue] {
 
   import context.dispatcher
 
@@ -60,8 +78,6 @@ class ResilientPool(childProps: Props,
   }
 
   recruitWorkers()
-
-  case object RecruitWorkers
 
   override def aroundReceive(receive: Actor.Receive, msg: Any): Unit = {
     log.debug("Received {} from {}", msg, sender())

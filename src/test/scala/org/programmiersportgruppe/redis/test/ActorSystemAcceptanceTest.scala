@@ -9,6 +9,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import scala.sys.process.ProcessLogger
 import java.util.concurrent.atomic.AtomicInteger
+import org.programmiersportgruppe.redis.ResilientPoolMailbox
 
 object ActorSystemAcceptanceTest {
   val nextRedisServerPort = new AtomicInteger(4321)
@@ -34,7 +35,14 @@ class ActorSystemAcceptanceTest extends Test {
       , "--bind", address.getAddress.getHostAddress
       , "--save", ""  // disable saving state to disk
     )).run(ProcessLogger { line =>
-      info("Redis server output: " + line.replaceAll("\r?\n?$", ""))
+      while(
+        try {
+          info("Redis server output: " + line.replaceAll("\r?\n?$", ""))
+          false
+        } catch {
+          case e: InterruptedException => true
+        }
+      ) ()
       output.append(line)
       if (line contains "The server is now ready to accept connections")
         serverReady.success(())
@@ -55,11 +63,20 @@ class ActorSystemAcceptanceTest extends Test {
 
   def withActorSystem(testCode: ActorSystem => Any) {
     val actorSystem = ActorSystem("Test-actor-system-for-" + getClass.getSimpleName, ConfigFactory.parseString(
-      """
+      s"""
       akka {
         loglevel = DEBUG
         log-dead-letters = 100
         actor.debug.unhandled = on
+
+        actor.deployment {
+          /redis-connection-pool {
+            dispatcher = akre-dispatcher
+          }
+        }
+      }
+      akre-dispatcher {
+        mailbox-type = "${classOf[ResilientPoolMailbox].getName}"
       }
       """
     ))
