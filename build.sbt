@@ -17,7 +17,7 @@ organization := "org.programmiersportgruppe"
 
 scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
 
-crossScalaVersions := Seq("2.11.0-M8", "2.10.3", "2.10.4-RC2")
+crossScalaVersions := Seq("2.10.4", "2.11.0-M8")
 
 scalaVersion := crossScalaVersions.value.head
 
