@@ -22,6 +22,18 @@ sealed abstract class Command(commandName: String, args: Seq[CommandArgument]) {
 
   def execute(implicit client: RedisClient) = client.execute(this)
 
+  /**
+    * A short rendering of the command,
+    * appropriate for use exception messages and log statements
+    * without risk of being ridiculously long.
+    */
+  override def toString = argsWithCommand.map {
+    case RString(value) => value
+    case Key(key) => "<key>"
+    case RByteString(byteString) => "<string>"
+    case RInteger(value) => value.toString
+  }.mkString(" ")
+
   lazy val serialised: ByteString = {
     val builder = new ByteStringBuilder
     builder.putByte('*').append(ByteString(argsWithCommand.length.toString)).putByte('\r').putByte('\n')

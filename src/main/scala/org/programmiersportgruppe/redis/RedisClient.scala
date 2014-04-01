@@ -19,7 +19,8 @@ case class ErrorReplyException(command: Command, reply: ErrorReply)
 case class UnexpectedReplyException(command: Command, reply: ProperReply)
   extends RedisClientException(s"Unexpected reply received: ${reply}\nFor command: $command")
 
-case class RequestExecutionException(message: String, cause: Throwable) extends RedisClientException(message, cause)
+case class RequestExecutionException(command: Command, cause: Throwable)
+  extends RedisClientException(s"Error while executing command [$command]: ${cause.getMessage}", cause)
 
 
 class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
@@ -71,7 +72,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     case (`command`, r: ProperReply) => r
     case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
   }, {
-    case e: Throwable => new RequestExecutionException(s"Error while executing command [$command]: ${e.getMessage}", e)
+    case e: Throwable => new RequestExecutionException(command, e)
   })
 
   /**
@@ -84,7 +85,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
   def executeConnectionClose(command: Command with ConnectionCloseExpected): Future[Unit] = (poolActor ? command).transform({
     case () => ()
   }, {
-    case e: Throwable => new RequestExecutionException(s"Error while executing command [$command]: ${e.getMessage}", e)
+    case e: Throwable => new RequestExecutionException(command, e)
   })
 
   /**
