@@ -110,7 +110,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       }
 
       withRedisServer { serverAddress =>
-//        client.waitUntilConnected(5.seconds)
+        client.waitUntilConnected(50.milliseconds)
 
         assertResult(StatusReply("OK")) {
           await(SET(Key("A key"), ByteString(4)).execute)
