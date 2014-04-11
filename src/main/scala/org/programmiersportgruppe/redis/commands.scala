@@ -4,49 +4,6 @@ import akka.util.{ByteStringBuilder, ByteString}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-sealed trait CommandArgument { val toByteString: ByteString }
-case class Key(key: ByteString) extends CommandArgument {
-  override lazy val toByteString = key
-  override def toString = s"Key(${key.utf8String})"
-}
-object Key { def apply(key: String) = new Key(ByteString(key)) }
-case class RByteString(value: ByteString) extends CommandArgument { override lazy val toByteString = value }
-case class RString(value: String) extends CommandArgument { override lazy val toByteString = ByteString(value) }
-case class RInteger(value: Long) extends CommandArgument { override lazy val toByteString = ByteString(value.toString) }
-
-
-sealed abstract class Command(commandName: String, args: Seq[CommandArgument]) {
-
-  val name = commandName
-  lazy val argsWithCommand = RString(name) +: args
-
-  def execute(implicit client: RedisClient) = client.execute(this)
-
-  /**
-    * A short rendering of the command,
-    * appropriate for use exception messages and log statements
-    * without risk of being ridiculously long.
-    */
-  override def toString = argsWithCommand.map {
-    case RString(value) => value
-    case Key(key) => "<key>"
-    case RByteString(byteString) => "<string>"
-    case RInteger(value) => value.toString
-  }.mkString(" ")
-
-  lazy val serialised: ByteString = {
-    val builder = new ByteStringBuilder
-    builder.putByte('*').append(ByteString(argsWithCommand.length.toString)).putByte('\r').putByte('\n')
-    argsWithCommand.map(_.toByteString).foreach(bytes =>
-      builder
-        .putByte('$').append(ByteString(bytes.length.toString)).putByte('\r').putByte('\n')
-        .append(bytes).putByte('\r').putByte('\n')
-    )
-    builder.result()
-  }
-
-}
-
 //case class UntypedRedisCommand(name: String, args: Seq[RedisCommandArgument]) extends RedisCommand(name, args)
 
 sealed abstract class NamedCommand(args: CommandArgument*) extends Command(null, args) {
