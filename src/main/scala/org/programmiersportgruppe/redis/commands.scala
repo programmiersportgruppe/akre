@@ -7,7 +7,7 @@ import scala.concurrent.{ExecutionContext, Future}
 //case class UntypedRedisCommand(name: String, args: Seq[RedisCommandArgument]) extends RedisCommand(name, args)
 
 sealed abstract class NamedCommand(args: CommandArgument*) extends Command(null, args) {
-  override val name = this.getClass.getSimpleName
+  override val name = this.getClass.getSimpleName.replace('_', ' ')
 }
 
 trait BulkExpected {
@@ -53,6 +53,8 @@ case object OnlyIfKeyAlreadyExists extends CreationRestriction("XX")
 case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends NamedCommand(Seq(key, RByteString(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
 
 // Server
+case class CLIENT_SETNAME(connectionName: ByteString) extends NamedCommand(RByteString(connectionName)) with OkStatusExpected
+
 sealed abstract class PersistenceModifier(flag: String) { val arg = RString(flag) }
 case object Save extends PersistenceModifier("SAVE")
 case object NoSave extends PersistenceModifier("NOSAVE")
