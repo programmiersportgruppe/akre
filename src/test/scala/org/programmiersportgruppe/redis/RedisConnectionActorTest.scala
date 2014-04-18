@@ -5,6 +5,7 @@ import akka.testkit.{TestActorRef, TestKit}
 import akka.util.ByteString
 
 import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
+import Command.Key
 
 
 class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
@@ -19,12 +20,12 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
         kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
-        assertResult(set -> StatusReply("OK")) {
+        assertResult(set -> RSimpleString.OK) {
           await(ref ? set)
         }
 
         val get = GET(Key("foo"))
-        assertResult(get -> BulkReply(Some(ByteString("bar")))) {
+        assertResult(get -> RBulkString("bar")) {
           await(ref ? get)
         }
       }
@@ -44,10 +45,10 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
         val futureSetResult = ref ? set
         val futureGetResult = ref ? get
 
-        assertResult(set -> StatusReply("OK")) {
+        assertResult(set -> RSimpleString.OK) {
           await(futureSetResult)
         }
-        assertResult(get -> BulkReply(Some(ByteString("bar")))) {
+        assertResult(get -> RBulkString("bar")) {
           await(futureGetResult)
         }
       }

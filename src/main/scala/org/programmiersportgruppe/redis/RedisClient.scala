@@ -13,10 +13,10 @@ class RedisClientException(message: String, cause: Throwable) extends Exception(
   def this(message: String) = this(message, null)
 }
 
-case class ErrorReplyException(command: Command, reply: ErrorReply)
-  extends RedisClientException(s"Error reply received: ${reply.error}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
+case class ErrorReplyException(command: Command, reply: RError)
+  extends RedisClientException(s"Error reply received: ${reply.asString}\nFor command: $command\nSent as: ${command.serialised.utf8String}")
 
-case class UnexpectedReplyException(command: Command, reply: ProperReply)
+case class UnexpectedReplyException(command: Command, reply: RSuccessValue)
   extends RedisClientException(s"Unexpected reply received: ${reply}\nFor command: $command")
 
 case class RequestExecutionException(command: Command, cause: Throwable)
@@ -69,9 +69,9 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    * @throws ErrorReplyException if the server gives an error reply
    * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
    */
-  def execute(command: Command): Future[ProperReply] = (poolActor ? command).transform({
-    case (`command`, r: ProperReply) => r
-    case (`command`, e: ErrorReply) => throw new ErrorReplyException(command, e)
+  def execute(command: Command): Future[RSuccessValue] = (poolActor ? command).transform({
+    case (`command`, r: RSuccessValue) => r
+    case (`command`, e: RError)        => throw new ErrorReplyException(command, e)
   }, {
     case e: Throwable => new RequestExecutionException(command, e)
   })
@@ -99,8 +99,8 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    */
   def executeByteString(command: Command with BulkExpected): Future[Option[ByteString]] =
     execute(command) map {
-      case BulkReply(data)  => data
-      case reply            => throw new UnexpectedReplyException(command, reply)
+      case RBulkString(data) => data
+      case reply             => throw new UnexpectedReplyException(command, reply)
     }
 
   /**
@@ -115,8 +115,8 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    */
   def executeString(command: Command with BulkExpected): Future[Option[String]] =
     execute(command) map {
-      case BulkReply(data)  => data.map(_.utf8String)
-      case reply            => throw new UnexpectedReplyException(command, reply)
+      case RBulkString(data) => data.map(_.utf8String)
+      case reply             => throw new UnexpectedReplyException(command, reply)
     }
 
   /**
@@ -129,8 +129,8 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    */
   def executeLong(command: Command with IntegerExpected): Future[Long] =
     execute(command) map {
-      case IntegerReply(value)  => value
-      case reply                => throw new UnexpectedReplyException(command, reply)
+      case RInteger(value) => value
+      case reply           => throw new UnexpectedReplyException(command, reply)
     }
 
   /**
@@ -143,8 +143,8 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
    */
   def executeSuccessfully(command: Command with OkStatusExpected): Future[Unit] =
     execute(command) map {
-      case StatusReply("OK")  => ()
-      case reply              => throw new UnexpectedReplyException(command, reply)
+      case RSimpleString.OK => ()
+      case reply            => throw new UnexpectedReplyException(command, reply)
     }
 
   /**

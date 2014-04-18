@@ -1,12 +1,11 @@
 package org.programmiersportgruppe.redis
 
-import akka.util.{ByteString, ByteStringBuilder}
+import akka.util.ByteString
 
 
-abstract class Command(commandName: String, args: Seq[CommandArgument]) {
-
-  val name = commandName
-  lazy val argsWithCommand = RString(name) +: args
+class Command(val name: String, args: Seq[Command.Argument]) {
+  def argsWithCommand = RSimpleString(name) +: args
+  def asRArray = RArray(argsWithCommand.map(_.asRBulkString))
 
   def execute(implicit client: RedisClient) = client.execute(this)
 
@@ -16,21 +15,17 @@ abstract class Command(commandName: String, args: Seq[CommandArgument]) {
    * without much risk of being ridiculously long.
    */
   override def toString = argsWithCommand.map {
-    case RString(value) => value
-    case Key(key) => "<key>"
-    case RByteString(byteString) => "<string>"
+    case RSimpleString(string) => string
     case RInteger(value) => value.toString
+    case RBulkString.Null => "<null>"
+    case RBulkString(Some(bytes)) => s"<bytes=${bytes.length}>"
   }.mkString(" ")
 
-  lazy val serialised: ByteString = {
-    val builder = new ByteStringBuilder
-    builder.putByte('*').append(ByteString(argsWithCommand.length.toString)).putByte('\r').putByte('\n')
-    argsWithCommand.map(_.toByteString).foreach(bytes =>
-      builder
-        .putByte('$').append(ByteString(bytes.length.toString)).putByte('\r').putByte('\n')
-        .append(bytes).putByte('\r').putByte('\n')
-    )
-    builder.result()
-  }
+  lazy val serialised: ByteString = RValueSerializer.serialize(asRArray)
+}
 
+object Command {
+  type Argument = RScalar with RSuccessValue
+  type Key = RBulkString
+  val Key = RBulkString
 }

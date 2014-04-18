@@ -2,13 +2,13 @@ package org.programmiersportgruppe.redis
 
 import akka.util.{ByteStringBuilder, ByteString}
 import scala.concurrent.{ExecutionContext, Future}
+import Command.{Argument, Key}
 
-
-//case class UntypedRedisCommand(name: String, args: Seq[RedisCommandArgument]) extends RedisCommand(name, args)
-
-sealed abstract class NamedCommand(args: CommandArgument*) extends Command(null, args) {
-  override val name = this.getClass.getSimpleName.replace('_', ' ')
+abstract class TypedCommand[T] {
+  self: Command =>
+  def extractResult(reply: RValue): T
 }
+
 
 trait BulkExpected {
   self: Command =>
@@ -33,6 +33,12 @@ trait BooleanIntegerExpected
 //sealed abstract class BooleanCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[IntegerReply](args)
 //sealed abstract class BulkCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[BulkReply](args)
 
+
+sealed abstract class NamedCommand(args: Argument*) extends Command(null, args) {
+  override val name = getClass.getSimpleName.replace('_', ' ')
+}
+
+
 // Keys
 case class DEL(key: Key, additionalKeys: Key*) extends NamedCommand(key +: additionalKeys: _*) with IntegerExpected
 case class DUMP(key: Key) extends NamedCommand(key) with BulkExpected
@@ -42,20 +48,20 @@ case class EXPIRE(key: Key, seconds: Long) extends NamedCommand(key, RInteger(se
 // Strings
 case class GET(key: Key) extends NamedCommand(key) with BulkExpected
 
-sealed abstract class ExpirationPolicy(flag: String, duration: Long) { val args = Seq(RString(flag), RInteger(duration)) }
+sealed abstract class ExpirationPolicy(flag: String, duration: Long) { val args = Seq(RSimpleString(flag), RInteger(duration)) }
 case class ExpiresInSeconds(seconds: Long) extends ExpirationPolicy("EX", seconds)
 case class ExpiresInMilliseconds(millis: Long) extends ExpirationPolicy("PX", millis)
 
-sealed abstract class CreationRestriction(flag: String) { val arg = RString(flag) }
+sealed abstract class CreationRestriction(flag: String) { val arg = RSimpleString(flag) }
 case object OnlyIfKeyDoesNotAlreadyExist extends CreationRestriction("NX")
 case object OnlyIfKeyAlreadyExists extends CreationRestriction("XX")
 
-case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends NamedCommand(Seq(key, RByteString(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
+case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends NamedCommand(Seq(key, RBulkString(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
 
 // Server
-case class CLIENT_SETNAME(connectionName: ByteString) extends NamedCommand(RByteString(connectionName)) with OkStatusExpected
+case class CLIENT_SETNAME(connectionName: String) extends NamedCommand(RSimpleString(connectionName)) with OkStatusExpected
 
-sealed abstract class PersistenceModifier(flag: String) { val arg = RString(flag) }
+sealed abstract class PersistenceModifier(flag: String) { val arg = RSimpleString(flag) }
 case object Save extends PersistenceModifier("SAVE")
 case object NoSave extends PersistenceModifier("NOSAVE")
 
@@ -67,7 +73,7 @@ case class Multi(command1: Command, command2: Command, additionalCommands: Comma
 
 trait OptimisticTransactionContinuation
 trait OptimisticTransactionPerpetuation extends OptimisticTransactionContinuation {
-  def execute(continue: Seq[Reply] => OptimisticTransactionContinuation)(implicit client: RedisClient) = ???
+  def execute(continue: Seq[RValue] => OptimisticTransactionContinuation)(implicit client: RedisClient) = ???
 }
 case class Watching(key: Key, additionalKeys: Key*)(command: Command, additionalCommands: Command*) extends OptimisticTransactionPerpetuation
 case class Continue(command: Command, additionalCommands: Command*) extends OptimisticTransactionPerpetuation

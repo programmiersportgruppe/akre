@@ -8,6 +8,7 @@ import java.util.Date
 import scala.concurrent.{TimeoutException, Await}
 import akka.pattern.AskTimeoutException
 import scala.util.Failure
+import Command.Key
 
 
 class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
@@ -76,7 +77,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         client = new RedisClient(actorSystem, serverAddress, 1.second, 3.seconds, 1)
         client.waitUntilConnected(1.second)
 
-        assertResult(StatusReply("OK")) {
+        assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(1)).execute)
         }
       }
@@ -88,7 +89,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       withRedisServer { serverAddress =>
         client.waitUntilConnected(1.second)
 
-        assertResult(StatusReply("OK")) {
+        assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
         }
       }
@@ -112,7 +113,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       withRedisServer { serverAddress =>
         client.waitUntilConnected(200.milliseconds)
 
-        assertResult(StatusReply("OK")) {
+        assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
         }
       }

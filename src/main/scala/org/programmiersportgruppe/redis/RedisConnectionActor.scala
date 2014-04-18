@@ -58,7 +58,7 @@ class RedisConnectionActor(remote: InetSocketAddress, messageToParentOnConnected
         //                    listener ! "write failed"
         case Tcp.Received(data) =>
           log.debug("Received {} bytes of data: [{}]", data.length, data.utf8String)
-          replyReconstructor.process(data) { reply: Reply =>
+          replyReconstructor.process(data) { reply: RValue =>
             log.debug("Decoded reply {}", reply)
             assert(pendingCommands.nonEmpty, "Received a completely unexpected reply")
             val (originalSender, command) = pendingCommands.dequeue()

@@ -34,16 +34,16 @@ trait UnifiedProtocolParsers extends Parsers {
   def terminatedInteger: Parser[Long] = newlineTerminatedString ^^ (_.toLong)
 
 
-  def reply: Parser[Reply] = statusReply | errorReply | integerReply | bulkReply | multiBulkReply
+  def reply: Parser[RValue] = statusReply | errorReply | integerReply | bulkReply | multiBulkReply
 
-  def statusReply: Parser[StatusReply] = "+" ~> commit(newlineTerminatedString) ^^ StatusReply
-  def errorReply: Parser[ErrorReply] = "-" ~> commit(newlineTerminatedString) ^^ ErrorReply
-  def integerReply: Parser[IntegerReply] = ":" ~> commit(terminatedInteger) ^^ IntegerReply
-  def bulkReply: Parser[BulkReply] = "$" ~> commit(terminatedInteger >> {
+  def statusReply: Parser[RSimpleString] = "+" ~> commit(newlineTerminatedString) ^^ RSimpleString.apply
+  def errorReply: Parser[RError] = "-" ~> commit(newlineTerminatedString) ^^ RError.apply
+  def integerReply: Parser[RInteger] = ":" ~> commit(terminatedInteger) ^^ RInteger.apply
+  def bulkReply: Parser[RBulkString] = "$" ~> commit(terminatedInteger >> {
     case -1 => success(None)
     case size => bytes(size.toInt) <~ newline ^^ Some.apply
-  }) ^^ BulkReply
-  def multiBulkReply: Parser[MultiBulkReply] = ("*" ~> commit(terminatedInteger)).flatMap(n => repN(n.toInt, reply)) ^^ MultiBulkReply
+  }) ^^ RBulkString.apply
+  def multiBulkReply: Parser[RArray] = ("*" ~> commit(terminatedInteger)).flatMap(n => repN(n.toInt, reply)) ^^ RArray
 }
 
 object UnifiedProtocolParsers {

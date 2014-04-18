@@ -7,7 +7,7 @@ class ParserCombinatorReplyReconstructor extends ReplyReconstructor with Unified
 
   private var buffer: ByteString = ByteString.empty
 
-  def extractNext: Option[Reply] = {
+  def extractNext: Option[RValue] = {
     reply(new ByteStringReader(buffer, 0)) match {
       case Success(reply, remainder) =>
         buffer = remainder.asInstanceOf[ByteStringReader].asByteString
@@ -17,12 +17,12 @@ class ParserCombinatorReplyReconstructor extends ReplyReconstructor with Unified
     }
   }
 
-  def extractStream: Stream[Reply] = extractNext match {
+  def extractStream: Stream[RValue] = extractNext match {
     case Some(reply) => reply #:: extractStream
     case None => Stream.empty
   }
 
-  def process(data: ByteString)(handleReply: (Reply) => _) {
+  def process(data: ByteString)(handleReply: (RValue) => _) {
     buffer ++= data
     extractStream.foreach(handleReply)
   }
