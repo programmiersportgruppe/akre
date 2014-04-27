@@ -7,7 +7,7 @@ lazy val customBuildSuffix = Def.setting(if (scalaVersion.value startsWith "2.11
 
 name := "akre"
 
-version := "0.6.1" + customBuildSuffix.value
+version := "0.6.2" + customBuildSuffix.value
 
 description := "A Redis client for Scala, implemented using Akka."
 
@@ -17,7 +17,7 @@ organization := "org.programmiersportgruppe"
 
 scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
 
-crossScalaVersions := Seq("2.10.4", "2.11.0-RC4")
+crossScalaVersions := Seq("2.10.4", "2.11.0")
 
 scalaVersion := crossScalaVersions.value.head
 
@@ -29,7 +29,7 @@ dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value
 
 
 
-lazy val akkaVersion = Def.setting("2.3.0" + customBuildSuffix.value)
+lazy val akkaVersion = Def.setting("2.3.2" + customBuildSuffix.value)
 
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % akkaVersion.value
 
