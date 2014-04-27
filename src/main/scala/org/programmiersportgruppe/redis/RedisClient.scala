@@ -50,6 +50,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
   def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1) {
     require(minConnections <= numberOfConnections)
     val deadline = timeout.fromNow
+    val sleepMillis = Math.min(timeout.toMillis / 10, 30)
     while(deadline.timeLeft match {
       case remaining if remaining > Duration.Zero =>
         Await.result(poolActor.ask(GetRoutees)(remaining), timeout) match {
@@ -57,7 +58,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
         }
       case _ => throw new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections")
     })
-      Thread.sleep(30)
+      Thread.sleep(sleepMillis)
   }
 
   /**
