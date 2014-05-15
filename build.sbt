@@ -11,6 +11,8 @@ version := "0.7.0" + customBuildSuffix.value
 
 description := "A Redis client for Scala, implemented using Akka."
 
+homepage := Some(url("https://github.com/programmiersportgruppe/akre"))
+
 organization := "org.programmiersportgruppe"
 
 
