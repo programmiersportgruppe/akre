@@ -23,7 +23,7 @@ case class RequestExecutionException(command: Command, cause: Throwable)
   extends RedisClientException(s"Error while executing command [$command]: ${cause.getMessage}", cause)
 
 
-class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, poolName: String = "redis-connection-pool") {
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, poolActorName: String = "akre-redis-pool") {
   import akka.pattern.ask
   import actorRefFactory.dispatcher
 
@@ -44,7 +44,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
       routingLogic = RoundRobinRoutingLogic()
     )
 
-    actorRefFactory.actorOf(pool, poolName)
+    actorRefFactory.actorOf(pool, poolActorName)
   }
 
   def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1) {

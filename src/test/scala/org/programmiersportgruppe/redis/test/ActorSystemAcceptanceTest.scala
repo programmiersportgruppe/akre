@@ -70,13 +70,20 @@ class ActorSystemAcceptanceTest extends Test {
         actor.debug.unhandled = on
 
         actor.deployment {
-          /redis-connection-pool {
-            dispatcher = akre-dispatcher
+          /akre-redis-pool {
+            dispatcher = akre-coordinator-dispatcher
+          }
+          "/akre-redis-pool/*" {
+            dispatcher = akre-connection-dispatcher
           }
         }
       }
-      akre-dispatcher {
+      akre-coordinator-dispatcher {
+        type = PinnedDispatcher
         mailbox-type = "${classOf[ResilientPoolMailbox].getName}"
+      }
+      akre-connection-dispatcher {
+        type = PinnedDispatcher
       }
       """
     ))
