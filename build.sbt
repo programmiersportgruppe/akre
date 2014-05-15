@@ -42,7 +42,7 @@ libraryDependencies ++= (
 
 
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.4" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.6" % "test"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test"
 
