@@ -104,7 +104,7 @@ class ResilientPool(childProps: Props,
         log.info("New worker {} pending activation", worker)
       }
   }
-  
+
   def activeWorkerCount: Int = router.fold(0)(_.routees.size)
 
   def deactivateWorker(worker: ActorRef): Boolean = {
