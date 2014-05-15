@@ -13,11 +13,11 @@ object RedisConnectionActor {
   case class UnableToConnectException(connectMessage: Tcp.Connect) extends RuntimeException("Unable to connect to Redis server with " + connectMessage)
   case class UnexpectedlyClosedException(closedEvent: Tcp.ConnectionClosed, pendingCommands: Seq[(ActorRef, Command)]) extends RuntimeException(s"Connection to Redis server unexpectedly closed with ${pendingCommands.length} command(s) pending: $closedEvent")
 
-  def props(remote: InetSocketAddress, messageToParentOnConnected: Option[Any] = None): Props =
-    Props(classOf[RedisConnectionActor], remote, messageToParentOnConnected)
+  def props(remote: InetSocketAddress, connectionSetupCommands: Seq[Command] = Nil, messageToParentOnConnected: Option[Any] = None): Props =
+    Props(classOf[RedisConnectionActor], remote, connectionSetupCommands, messageToParentOnConnected)
 }
 
-class RedisConnectionActor(remote: InetSocketAddress, messageToParentOnConnected: Option[Any]) extends Actor with Stash {
+class RedisConnectionActor(remote: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
   import RedisConnectionActor._
 
   val log = Logging(context.system, this)
@@ -45,14 +45,21 @@ class RedisConnectionActor(remote: InetSocketAddress, messageToParentOnConnected
       val connection = sender()
       context.watch(connection)
       connection ! Tcp.Register(self)
+
+      def executeCommand(command: Command, listener: ActorRef) {
+        pendingCommands.enqueue(listener -> command)
+        connection ! Tcp.Write(command.serialised)
+      }
+
+      for (command <- connectionSetupCommands)
+        executeCommand(command, Actor.noSender)
       messageToParentOnConnected.map(context.parent ! _)
       log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
       unstashAll()
       context become {
         case command: Command =>
           log.debug("Received command {}", command)
-          pendingCommands.enqueue(sender() -> command)
-          connection ! Tcp.Write(command.serialised)
+          executeCommand(command, sender())
         case Tcp.CommandFailed(w: Tcp.Write) =>
         // O/S buffer was full
         //                    listener ! "write failed"
@@ -61,8 +68,10 @@ class RedisConnectionActor(remote: InetSocketAddress, messageToParentOnConnected
           replyReconstructor.process(data) { reply: RValue =>
             log.debug("Decoded reply {}", reply)
             assert(pendingCommands.nonEmpty, "Received a completely unexpected reply")
-            val (originalSender, command) = pendingCommands.dequeue()
-            originalSender ! (command, reply)
+            pendingCommands.dequeue() match {
+              case (Actor.noSender, _)       => // nothing to do
+              case (originalSender, command) => originalSender ! (command, reply)
+            }
           }
         case "close" =>
           connection ! Tcp.Close

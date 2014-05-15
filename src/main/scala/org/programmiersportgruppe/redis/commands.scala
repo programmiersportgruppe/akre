@@ -46,6 +46,7 @@ case class EXISTS(key: Key) extends NamedCommand(key) with BooleanIntegerExpecte
 case class EXPIRE(key: Key, seconds: Long) extends NamedCommand(key, RInteger(seconds)) with BooleanIntegerExpected
 
 // Strings
+case class APPEND(key: Key, value: ByteString) extends NamedCommand(key, RBulkString(value)) with IntegerExpected
 case class GET(key: Key) extends NamedCommand(key) with BulkExpected
 
 sealed abstract class ExpirationPolicy(flag: String, duration: Long) { val args = Seq(RSimpleString(flag), RInteger(duration)) }

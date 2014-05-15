@@ -23,15 +23,17 @@ case class RequestExecutionException(command: Command, cause: Throwable)
   extends RedisClientException(s"Error while executing command [$command]: ${cause.getMessage}", cause)
 
 
-class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, poolActorName: String = "akre-redis-pool") {
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") {
+  def this(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
+    this(actorRefFactory, serverAddress, connectTimeout, requestTimeout, numberOfConnections, Seq(CLIENT_SETNAME(initialClientName)), poolActorName)
+
   import akka.pattern.ask
   import actorRefFactory.dispatcher
 
   implicit private val timeout = requestTimeout
 
   private val poolActor = {
-
-    val connection = RedisConnectionActor.props(serverAddress, Some(Ready))
+    val connection = RedisConnectionActor.props(serverAddress, connectionSetupCommands, Some(Ready))
 
     val pool = ResilientPool.props(
       childProps = connection,

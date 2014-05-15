@@ -120,4 +120,20 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
     }
   }
 
+
+  it should "send connection setup commands once per client" in {
+    withRedisServer { serverAddress =>
+      withActorSystem { actorSystem =>
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 3, Seq(APPEND(Key("song"), ByteString("La"))))
+        client.waitUntilConnected(5.seconds)
+
+        eventually {
+          assertResult(Some("LaLaLa")) {
+            await(GET(Key("song")).executeString)
+          }
+        }
+      }
+    }
+  }
+
 }
