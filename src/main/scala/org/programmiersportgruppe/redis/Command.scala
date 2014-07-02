@@ -4,7 +4,7 @@ import akka.util.ByteString
 
 
 class Command(val name: String, args: Seq[Command.Argument]) {
-  def argsWithCommand = RSimpleString(name) +: args
+  def argsWithCommand = name.split(" ").map(RSimpleString(_)).toSeq ++ args
   def asRArray = RArray(argsWithCommand.map(_.asRBulkString))
 
   def execute(implicit client: RedisClient) = client.execute(this)

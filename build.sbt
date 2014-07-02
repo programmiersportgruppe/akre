@@ -7,7 +7,7 @@ lazy val customBuildSuffix = Def.setting(if (scalaVersion.value startsWith "2.11
 
 name := "akre"
 
-version := "0.7.0" + customBuildSuffix.value
+version := "0.7.2" + customBuildSuffix.value
 
 description := "A Redis client for Scala, implemented using Akka."
 
@@ -17,7 +17,7 @@ organization := "org.programmiersportgruppe"
 
 
 
-scalacOptions := Seq("-feature", "-deprecation", "-Xfatal-warnings")
+scalacOptions := Seq("-Xfatal-warnings")
 
 crossScalaVersions := Seq("2.10.4", "2.11.0")
 
