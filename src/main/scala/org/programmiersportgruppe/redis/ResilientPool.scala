@@ -60,7 +60,7 @@ class ResilientPool(childProps: Props,
       scheduledRecruitment = newState match {
         case ho: creationCircuitBreakerLogic.HalfOpen => recruitAfter(ho.deadline)
         case o: creationCircuitBreakerLogic.Open => recruitAfter(o.deadline)
-        case c: creationCircuitBreakerLogic.Closed => None
+        case c: creationCircuitBreakerLogic.Closed => recruitAfter(Deadline.now)
       }
     }
 
