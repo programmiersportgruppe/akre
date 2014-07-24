@@ -13,11 +13,11 @@ object RedisConnectionActor {
   case class UnableToConnectException(connectMessage: Tcp.Connect) extends RuntimeException("Unable to connect to Redis server with " + connectMessage)
   case class UnexpectedlyClosedException(closedEvent: Tcp.ConnectionClosed, pendingCommands: Seq[(ActorRef, Command)]) extends RuntimeException(s"Connection to Redis server unexpectedly closed with ${pendingCommands.length} command(s) pending: $closedEvent")
 
-  def props(remote: InetSocketAddress, connectionSetupCommands: Seq[Command] = Nil, messageToParentOnConnected: Option[Any] = None): Props =
-    Props(classOf[RedisConnectionActor], remote, connectionSetupCommands, messageToParentOnConnected)
+  def props(hostName: String, hostPort: Int, connectionSetupCommands: Seq[Command] = Nil, messageToParentOnConnected: Option[Any] = None): Props =
+    Props(classOf[RedisConnectionActor], hostName, hostPort, connectionSetupCommands, messageToParentOnConnected)
 }
 
-class RedisConnectionActor(remote: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
+class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
   import RedisConnectionActor._
 
   val log = Logging(context.system, this)
@@ -25,8 +25,11 @@ class RedisConnectionActor(remote: InetSocketAddress, connectionSetupCommands: S
   val pendingCommands = mutable.Queue[(ActorRef, Command)]()
   var replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
-  log.debug("Connecting to Redis server at {}", remote)
-  IO(Tcp)(context.system) ! Tcp.Connect(remote)
+  val address = new InetSocketAddress(hostName, hostPort)
+
+  log.debug("Resolved host name {} to IP address {}", hostName, address.getAddress.getHostAddress)
+  log.debug("Connecting to Redis server at IP {} port {}", address.getAddress.getHostAddress, hostPort)
+  IO(Tcp)(context.system) ! Tcp.Connect(address)
 
   def receive = {
 
@@ -41,7 +44,7 @@ class RedisConnectionActor(remote: InetSocketAddress, connectionSetupCommands: S
       log.error(e.getMessage)
       throw e
 
-    case c @ Tcp.Connected(`remote`, local) =>
+    case c @ Tcp.Connected(remote, local) =>
       val connection = sender()
       context.watch(connection)
       connection ! Tcp.Register(self)

@@ -16,7 +16,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
     withRedisServer { address =>
       withActorSystem { implicit system =>
         val kit = new TestKit(system)
-        val ref = TestActorRef(RedisConnectionActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisConnectionActor.props(address.getHostName, address.getPort, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
@@ -36,7 +36,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
     withRedisServer { address =>
       withActorSystem { implicit system =>
         val kit = new TestKit(system)
-        val ref = TestActorRef(RedisConnectionActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisConnectionActor.props(address.getHostName, address.getPort, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
@@ -62,7 +62,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
         val setupCommands = List(
           SET(Key("A"), ByteString("ABC")),
           SET(Key("X"), ByteString("XYZ")))
-        val ref = TestActorRef(RedisConnectionActor.props(address, setupCommands, Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisConnectionActor.props(address.getHostName, address.getPort, setupCommands, Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val getA = GET(Key("A"))
