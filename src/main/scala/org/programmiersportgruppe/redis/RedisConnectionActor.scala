@@ -27,8 +27,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
 
   val address = new InetSocketAddress(hostName, hostPort)
 
-  log.debug("Resolved host name {} to IP address {}", hostName, address.getAddress.getHostAddress)
-  log.debug("Connecting to Redis server at IP {} port {}", address.getAddress.getHostAddress, hostPort)
+  log.debug("Connecting to Redis server host {} at IP {} port {}", hostName, address.getAddress.getHostAddress, hostPort)
   IO(Tcp)(context.system) ! Tcp.Connect(address)
 
   def receive = {
@@ -44,7 +43,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
       log.error(e.getMessage)
       throw e
 
-    case c @ Tcp.Connected(remote, local) =>
+    case c @ Tcp.Connected(`address`, local) =>
       val connection = sender()
       context.watch(connection)
       connection ! Tcp.Register(self)
@@ -57,7 +56,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
       for (command <- connectionSetupCommands)
         executeCommand(command, Actor.noSender)
       messageToParentOnConnected.map(context.parent ! _)
-      log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
+      log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", address, local)
       unstashAll()
       context become {
         case command: Command =>
