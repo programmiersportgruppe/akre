@@ -48,7 +48,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, hostName: String, hostPort: 
     actorRefFactory.actorOf(pool, poolActorName)
   }
 
-  def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1) {
+  def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1): Unit = {
     require(minConnections <= numberOfConnections)
     val deadline = timeout.fromNow
     val sleepMillis = Math.min(timeout.toMillis / 10, 30)

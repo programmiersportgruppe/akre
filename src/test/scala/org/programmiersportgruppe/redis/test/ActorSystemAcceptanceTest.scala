@@ -24,7 +24,7 @@ class ActorSystemAcceptanceTest extends Test {
 
   lazy val redisServerPort = ActorSystemAcceptanceTest.nextRedisServerPort.getAndIncrement
 
-  def withRedisServer(testCode: InetSocketAddress => Any) {
+  def withRedisServer(testCode: InetSocketAddress => Any): Unit = {
     val address = new InetSocketAddress(InetAddress.getLoopbackAddress, redisServerPort)
 
     val output = new StringBuilder
@@ -61,7 +61,7 @@ class ActorSystemAcceptanceTest extends Test {
     }
   }
 
-  def withActorSystem(testCode: ActorSystem => Any) {
+  def withActorSystem(testCode: ActorSystem => Any): Unit = {
     val actorSystem = ActorSystem("Test-actor-system-for-" + getClass.getSimpleName, ConfigFactory.parseString(
       s"""
       akka {

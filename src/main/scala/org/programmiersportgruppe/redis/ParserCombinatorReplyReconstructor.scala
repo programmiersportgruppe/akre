@@ -22,7 +22,7 @@ class ParserCombinatorReplyReconstructor extends ReplyReconstructor with Unified
     case None => Stream.empty
   }
 
-  def process(data: ByteString)(handleReply: (RValue) => _) {
+  def process(data: ByteString)(handleReply: (RValue) => _): Unit = {
     buffer ++= data
     extractStream.foreach(handleReply)
   }

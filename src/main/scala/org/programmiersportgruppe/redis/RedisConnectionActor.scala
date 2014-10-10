@@ -48,7 +48,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
       context.watch(connection)
       connection ! Tcp.Register(self)
 
-      def executeCommand(command: Command, listener: ActorRef) {
+      def executeCommand(command: Command, listener: ActorRef): Unit = {
         pendingCommands.enqueue(listener -> command)
         connection ! Tcp.Write(command.serialised)
       }

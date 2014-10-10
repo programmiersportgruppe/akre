@@ -1,6 +1,6 @@
 name := "akre"
 
-version := "0.8.2"
+version := "0.8.3"
 
 description := "A Redis client for Scala, implemented using Akka."
 
@@ -10,7 +10,10 @@ organization := "org.programmiersportgruppe"
 
 
 
-scalacOptions := Seq("-Xfatal-warnings")
+scalacOptions := Seq(
+  "-deprecation",
+  "-Xfatal-warnings",
+  "-Xfuture")
 
 crossScalaVersions := Seq("2.10.4", "2.11.2")
 
@@ -38,9 +41,3 @@ libraryDependencies ++= (
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.2" % "test"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test"
-
-// To make IntelliJ's test runner happy
-libraryDependencies ++= (
-  if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.2" % "test")
-  else Nil
-)

@@ -54,7 +54,7 @@ class ResilientPool(childProps: Props,
 
     var scheduledRecruitment: Option[Cancellable] = None
 
-    override def onStateChanged(newState: CircuitBreakerState) {
+    override def onStateChanged(newState: CircuitBreakerState): Unit = {
       scheduledRecruitment.map(_.cancel())
       log.debug("Creation circuit breaker has changed to state " + state)
       scheduledRecruitment = newState match {
@@ -84,7 +84,7 @@ class ResilientPool(childProps: Props,
     super.aroundReceive(receive, msg)
   }
 
-  def fireTardyWorkers() {
+  def fireTardyWorkers(): Unit = {
     while (pendingWorkers.headOption.exists(_._2.isOverdue())) {
       val (worker, _) = pendingWorkers.dequeue()
       log.warning("Stopping worker {}, which took too long to report ready.", worker)
@@ -93,7 +93,7 @@ class ResilientPool(childProps: Props,
     }
   }
 
-  def recruitWorkers() {
+  def recruitWorkers(): Unit = {
     fireTardyWorkers()
 
     for (_ <- 0 until (size - (activeWorkerCount + pendingWorkers.size)))

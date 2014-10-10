@@ -4,5 +4,5 @@ import akka.util.ByteString
 
 
 trait ReplyReconstructor {
-  def process(data: ByteString)(handleReply: RValue => _)
+  def process(data: ByteString)(handleReply: RValue => _): Unit
 }

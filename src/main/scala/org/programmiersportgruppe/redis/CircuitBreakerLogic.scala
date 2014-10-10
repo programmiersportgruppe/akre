@@ -68,18 +68,18 @@ class EventDrivenCircuitBreaker(logic: CircuitBreakerLogic) {
 
   var state: CircuitBreakerState = new logic.Closed(0)
 
-  def transitionTo(newState: CircuitBreakerState) {
+  def transitionTo(newState: CircuitBreakerState): Unit = {
     if (state != newState) {
       state = newState
       onStateChanged(state)
     }
   }
-  
-  def reportFailure() {
+
+  def reportFailure(): Unit = {
     transitionTo(state.onFailure)
   }
 
-  def reportSuccess() {
+  def reportSuccess(): Unit = {
     transitionTo(state.onSuccess)
   }
 
@@ -89,6 +89,6 @@ class EventDrivenCircuitBreaker(logic: CircuitBreakerLogic) {
     operationAllowed
   }
 
-  def onStateChanged(newState: CircuitBreakerState) {}
+  def onStateChanged(newState: CircuitBreakerState): Unit = {}
 
 }

@@ -13,7 +13,7 @@ object RValueSerializer {
     builder.result()
   }
 
-  def serializeTo(builder: ByteStringBuilder)(value: RValue) {
+  def serializeTo(builder: ByteStringBuilder)(value: RValue): Unit = {
     builder.putByte(value.sigil)
     value match {
       case s: RSimpleString => builder.append(s.asByteString).putBytes(newLine)
