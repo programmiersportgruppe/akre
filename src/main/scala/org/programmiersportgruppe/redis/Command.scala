@@ -17,7 +17,7 @@ class Command(val name: String, args: Seq[Command.Argument]) {
   override def toString = argsWithCommand.map {
     case RSimpleString(string) => string
     case RInteger(value) => value.toString
-    case RBulkString.Null => "<null>"
+    case RBulkString(None) => "<null>"
     case RBulkString(Some(bytes)) => s"<bytes=${bytes.length}>"
   }.mkString(" ")
 

@@ -1,9 +1,9 @@
 package org.programmiersportgruppe.redis.test
 
-import org.scalatest.{ShouldMatchers, FlatSpec}
-import org.scalautils.TypeCheckedTripleEquals
-import akka.util.Timeout
 import scala.concurrent.duration.FiniteDuration
+
+import org.scalactic.TypeCheckedTripleEquals
+import org.scalatest.{FlatSpec, ShouldMatchers}
 import org.scalatest.concurrent.Eventually
 
 
