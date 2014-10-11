@@ -102,9 +102,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 50.milliseconds, 3.seconds, 1)
         client.waitUntilConnected(1.second)
 
-        intercept[RequestExecutionException] {
-          await(SHUTDOWN().executeConnectionClose)
-        }
+        await(SHUTDOWN().executeConnectionClose)
       }
 
       withRedisServer { serverAddress =>

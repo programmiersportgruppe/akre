@@ -78,7 +78,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
         case "close" =>
           connection ! Tcp.Close
         case closed: Tcp.ConnectionClosed if sender() == connection =>
-          if (closed.isErrorClosed || pendingCommands.exists(!_.isInstanceOf[ConnectionCloseExpected])) {
+          if (closed.isErrorClosed || pendingCommands.exists(!_._2.isInstanceOf[ConnectionCloseExpected])) {
             val e = new UnexpectedlyClosedException(closed, pendingCommands)
             log.error(e.getMessage)
             pendingCommands.foreach {
