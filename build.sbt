@@ -14,7 +14,19 @@ scalacOptions := Seq(
   "-deprecation",
   "-Xlint",
   "-Xfatal-warnings",
-  "-Xfuture")
+  "-Ywarn-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-inaccessible",
+  "-Ywarn-nullary-override",
+  "-Ywarn-nullary-unit",
+  "-Ywarn-numeric-widen",
+  "-Xfuture") ++ (
+    if (scalaVersion.value.startsWith("2.10.")) Nil
+    else Seq(
+      "-Ywarn-infer-any",
+      "-Ywarn-unused",
+      "-Ywarn-unused-import")
+  )
 
 crossScalaVersions := Seq("2.10.4", "2.11.2")
 
