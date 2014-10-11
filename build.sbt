@@ -20,6 +20,7 @@ scalacOptions := Seq(
   "-Ywarn-nullary-override",
   "-Ywarn-nullary-unit",
   "-Ywarn-numeric-widen",
+  // possibly more trouble than it's worth:  "-Ywarn-value-discard",
   "-Xfuture") ++ (
     if (scalaVersion.value.startsWith("2.10.")) Nil
     else Seq(

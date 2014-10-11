@@ -13,7 +13,7 @@ object RValueSerializer {
     builder.result()
   }
 
-  def serializeTo(builder: ByteStringBuilder)(value: RValue): Unit = {
+  def serializeTo(builder: ByteStringBuilder)(value: RValue): ByteStringBuilder = {
     builder.putByte(value.sigil)
     value match {
       case s: RSimpleString => builder.append(s.asByteString).putBytes(newLine)
@@ -21,7 +21,7 @@ object RValueSerializer {
       case i: RInteger => builder.append(i.asByteString).putBytes(newLine)
       case RBulkString(Some(data)) => builder.append(ByteString(data.length.toString)).putBytes(newLine).append(data).putBytes(newLine)
       case RBulkString(None) => builder.putBytes(nullBulkStringSerialization)
-      case RArray(items) => builder.append(ByteString(items.length.toString)).putBytes(newLine); items.foreach(serializeTo(builder))
+      case RArray(items) => items.foldLeft(builder.append(ByteString(items.length.toString)).putBytes(newLine))((b, i) => serializeTo(b)(i))
     }
   }
 }

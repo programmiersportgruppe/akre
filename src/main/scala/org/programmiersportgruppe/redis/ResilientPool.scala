@@ -107,12 +107,12 @@ class ResilientPool(childProps: Props,
 
   def activeWorkerCount: Int = router.fold(0)(_.routees.size)
 
-  def deactivateWorker(worker: ActorRef): Boolean = {
+  def deactivateWorker(worker: ActorRef): Unit = {
     val priorStatus =
       if (pendingWorkers.dequeueFirst(_._1 == worker).nonEmpty) {
         creationCircuitBreaker.reportFailure()
         Some("pending")
-      } else if (router.exists(_.routees.exists(_ == ActorRefRoutee(worker)))) {
+      } else if (router.exists(_.routees.contains(ActorRefRoutee(worker)))) {
         router = router.flatMap(_.removeRoutee(worker) match {
           case r if r.routees.nonEmpty => Some(r)
           case _ => None
@@ -121,11 +121,10 @@ class ResilientPool(childProps: Props,
       } else {
         None
       }
-    priorStatus.map { status =>
+    priorStatus.foreach { status =>
       log.warning("Removed {} worker {} (now {} of {})", status, worker, activeWorkerCount, size)
       recruitWorkers()
     }
-    priorStatus.isDefined
   }
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy(loggingEnabled = false) {
