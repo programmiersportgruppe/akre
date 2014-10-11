@@ -1,13 +1,10 @@
 package org.programmiersportgruppe.redis
 
-import akka.util.{ByteStringBuilder, ByteString}
-import scala.concurrent.{ExecutionContext, Future}
-import Command.{Argument, Key}
+import scala.concurrent.Future
 
-abstract class TypedCommand[T] {
-  self: Command =>
-  def extractResult(reply: RValue): T
-}
+import akka.util.ByteString
+
+import org.programmiersportgruppe.redis.Command.{Argument, Key}
 
 
 trait BulkExpected {

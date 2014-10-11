@@ -55,16 +55,18 @@ class ResilientPool(childProps: Props,
     var scheduledRecruitment: Option[Cancellable] = None
 
     override def onStateChanged(newState: CircuitBreakerState): Unit = {
-      scheduledRecruitment.map(_.cancel())
+      scheduledRecruitment.foreach(_.cancel())
       log.debug("Creation circuit breaker has changed to state " + state)
-      scheduledRecruitment = newState match {
-        case ho: creationCircuitBreakerLogic.HalfOpen => recruitAfter(ho.deadline)
-        case o: creationCircuitBreakerLogic.Open => recruitAfter(o.deadline)
-        case c: creationCircuitBreakerLogic.Closed => recruitAfter(Deadline.now)
-      }
+
+      import creationCircuitBreakerLogic._
+      scheduledRecruitment = recruitAfter(newState match {
+        case ho: HalfOpen => ho.deadline
+        case o: Open => o.deadline
+        case c: Closed => Deadline.now
+      })
     }
 
-    def recruitAfter(deadline: Deadline) = {
+    def recruitAfter(deadline: Deadline): Option[Cancellable] = {
       val timeLeft = deadline.timeLeft
       if (timeLeft > Duration.Zero) {
         log.debug("Scheduling recruitment after state change in " + timeLeft)
@@ -142,7 +144,7 @@ class ResilientPool(childProps: Props,
       log.info(s"Worker {} activated (now {} of {})", sender(), activeWorkerCount, size)
     case Terminated(worker) => deactivateWorker(worker)
     case GetRoutees => sender ! Routees(router.fold(scala.collection.immutable.IndexedSeq.empty[Routee])(_.routees))
-    case message if router.exists(_.routees.exists(_ == ActorRefRoutee(sender()))) => log.error("Unexpected message from active worker {}: {}", sender(), message)
+    case message if router.exists(_.routees.contains(ActorRefRoutee(sender()))) => log.error("Unexpected message from active worker {}: {}", sender(), message)
     case message if pendingWorkers.exists(_._1 == sender()) => log.error("Unexpected message from pending worker {}: {}", sender(), message)
     case message => router match {
       case _ if sender() == ActorRef.noSender => log.error("WTF? incoming senderless message: {}", message)

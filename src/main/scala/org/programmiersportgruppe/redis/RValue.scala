@@ -30,7 +30,7 @@ case class RError(value: String) extends RSimpleScalar {
   }
 }
 object RError {
-  def apply(error: ByteString) = new RError(error.utf8String)
+  def apply(error: ByteString): RError = new RError(error.utf8String)
 }
 
 sealed trait RSuccessValue extends RValue
@@ -53,7 +53,7 @@ case class RInteger(value: Long) extends RSuccessValue with RSimpleScalar {
   override def sigil = ':'
 }
 object RInteger {
-  def apply(value: String) = new RInteger(value.toLong)
+  def apply(value: String): RInteger = new RInteger(value.toLong)
   def apply(value: ByteString): RInteger = RInteger(value.utf8String)
 }
 
@@ -63,7 +63,7 @@ case class RBulkString(data: Option[ByteString]) extends RSuccessValue with RSca
   override def asRBulkString = this
 }
 object RBulkString {
-  def apply(bulkString: ByteString) = new RBulkString(Some(bulkString))
+  def apply(bulkString: ByteString): RBulkString = new RBulkString(Some(bulkString))
   def apply(s: String): RBulkString = RBulkString(ByteString(s))
 
   val Null = RBulkString(None)

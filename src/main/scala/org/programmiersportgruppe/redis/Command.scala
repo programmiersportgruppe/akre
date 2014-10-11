@@ -1,13 +1,19 @@
 package org.programmiersportgruppe.redis
 
+import scala.concurrent.Future
+
 import akka.util.ByteString
 
+import org.programmiersportgruppe.redis.Command.Argument
 
-class Command(val name: String, args: Seq[Command.Argument]) {
-  def argsWithCommand = name.split(" ").map(RSimpleString(_)).toSeq ++ args
-  def asRArray = RArray(argsWithCommand.map(_.asRBulkString))
 
-  def execute(implicit client: RedisClient) = client.execute(this)
+class Command(val name: String, args: Seq[Argument]) {
+  def argsWithCommand: Seq[Argument] = name.split(" ").toSeq.map(RSimpleString(_)) ++ args
+  def asRArray: RArray = RArray(argsWithCommand.map(_.asRBulkString))
+
+  lazy val serialised: ByteString = RValueSerializer.serialize(asRArray)
+
+  def execute(implicit client: RedisClient): Future[RSuccessValue] = client.execute(this)
 
   /**
    * A short rendering of the command,
@@ -20,8 +26,6 @@ class Command(val name: String, args: Seq[Command.Argument]) {
     case RBulkString(None) => "<null>"
     case RBulkString(Some(bytes)) => s"<bytes=${bytes.length}>"
   }.mkString(" ")
-
-  lazy val serialised: ByteString = RValueSerializer.serialize(asRArray)
 }
 
 object Command {

@@ -6,7 +6,7 @@ import akka.util.ByteString
 class PushParserReplyReconstructor extends ReplyReconstructor {
   var parser: Parser[RValue] = RValueParser
 
-  override def process(data: ByteString)(handleReply: Function1[RValue, _]) = {
+  override def process(data: ByteString)(handleReply: RValue => _) = {
     parser.parse(data) match {
       case continuation: Parser[RValue] =>
         parser = continuation

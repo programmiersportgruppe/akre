@@ -12,6 +12,9 @@ organization := "org.programmiersportgruppe"
 
 scalacOptions := Seq(
   "-deprecation",
+  "-encoding", "UTF-8",
+  "-feature",
+  "-unchecked",
   "-Xlint",
   "-Xfatal-warnings",
   "-Ywarn-adapted-args",

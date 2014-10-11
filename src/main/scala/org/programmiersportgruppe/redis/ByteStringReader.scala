@@ -28,5 +28,5 @@ case class ByteStringReader(byteString: ByteString, override val offset: Int) ex
       None -> this
   }
 
-  def asByteString = byteString.drop(offset)
+  def asByteString: ByteString = byteString.drop(offset)
 }
