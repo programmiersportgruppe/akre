@@ -12,6 +12,7 @@ organization := "org.programmiersportgruppe"
 
 scalacOptions := Seq(
   "-deprecation",
+  "-Xlint",
   "-Xfatal-warnings",
   "-Xfuture")
 

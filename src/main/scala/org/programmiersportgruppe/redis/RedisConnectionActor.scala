@@ -72,7 +72,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
             assert(pendingCommands.nonEmpty, "Received a completely unexpected reply")
             pendingCommands.dequeue() match {
               case (Actor.noSender, _)       => // nothing to do
-              case (originalSender, command) => originalSender ! (command, reply)
+              case (originalSender, command) => originalSender ! (command -> reply)
             }
           }
         case "close" =>
