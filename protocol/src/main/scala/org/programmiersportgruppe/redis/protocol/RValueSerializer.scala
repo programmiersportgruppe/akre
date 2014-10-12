@@ -7,7 +7,7 @@ import org.programmiersportgruppe.redis._
 
 object RValueSerializer {
   val newLine = Array[Byte]('\r', '\n')
-  val nullBulkStringSerialization = Array[Byte]('-', '1') ++ newLine
+  val nullBulkStringSerialization = Array[Byte]('$', '-', '1') ++ newLine
 
   def serialize(value: RValue): ByteString = {
     val builder = new ByteStringBuilder
@@ -16,14 +16,13 @@ object RValueSerializer {
   }
 
   def serializeTo(builder: ByteStringBuilder)(value: RValue): ByteStringBuilder = {
-    builder.putByte(value.sigil)
     value match {
-      case s: RSimpleString => builder.append(s.asByteString).putBytes(newLine)
-      case e: RError => builder.append(e.asByteString).putBytes(newLine)
-      case i: RInteger => builder.append(i.asByteString).putBytes(newLine)
-      case RBulkString(Some(data)) => builder.append(ByteString(data.length.toString)).putBytes(newLine).append(data).putBytes(newLine)
+      case s: RSimpleString => builder.putByte('+').append(s.asByteString).putBytes(newLine)
+      case e: RError => builder.putByte('-').append(e.asByteString).putBytes(newLine)
+      case i: RInteger => builder.putByte(':').append(i.asByteString).putBytes(newLine)
+      case RBulkString(Some(data)) => builder.putByte('$').append(ByteString(data.length.toString)).putBytes(newLine).append(data).putBytes(newLine)
       case RBulkString(None) => builder.putBytes(nullBulkStringSerialization)
-      case RArray(items) => items.foldLeft(builder.append(ByteString(items.length.toString)).putBytes(newLine))((b, i) => serializeTo(b)(i))
+      case RArray(items) => items.foldLeft(builder.putByte('*').append(ByteString(items.length.toString)).putBytes(newLine))((b, i) => serializeTo(b)(i))
     }
   }
 }

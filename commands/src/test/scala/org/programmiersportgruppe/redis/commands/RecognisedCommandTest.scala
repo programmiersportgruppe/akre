@@ -11,7 +11,7 @@ class RecognisedCommandTest extends Test {
   behavior of classOf[RecognisedCommand].getName
 
   it should "have a short string representation" in {
-    assertResult("RecognisedCommand: SET <bytes=3> <bytes=5> EX 7") {
+    assertResult("RecognisedCommand: SET abc <bytes=5> EX 7") {
       SET(Key("abc"), ByteString("yays!"), Some(ExpiresInSeconds(7))).toString
     }
   }

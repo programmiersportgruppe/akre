@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import akka.util.ByteString
 
 import org.programmiersportgruppe.redis._
-import org.programmiersportgruppe.redis.Command.Argument
+import org.programmiersportgruppe.redis.CommandArgument.ImplicitConversions._
 
 
 trait BulkExpected {
@@ -33,7 +33,7 @@ trait BooleanIntegerExpected
 
 
 // TODO: Rename class
-sealed abstract class RecognisedCommand(override val arguments: Argument*) extends Command {
+sealed abstract class RecognisedCommand(override val arguments: CommandArgument*) extends Command {
   override val name = Command.Name(getClass.getSimpleName.replace('_', ' '))
 
   override def toString = "RecognisedCommand: " + asCliString
@@ -44,28 +44,28 @@ sealed abstract class RecognisedCommand(override val arguments: Argument*) exten
 case class DEL(key: Key, additionalKeys: Key*) extends RecognisedCommand(key +: additionalKeys: _*) with IntegerExpected
 case class DUMP(key: Key) extends RecognisedCommand(key) with BulkExpected
 case class EXISTS(key: Key) extends RecognisedCommand(key) with BooleanIntegerExpected
-case class EXPIRE(key: Key, seconds: Long) extends RecognisedCommand(key, RInteger(seconds)) with BooleanIntegerExpected
+case class EXPIRE(key: Key, seconds: Long) extends RecognisedCommand(key, seconds) with BooleanIntegerExpected
 
 // Strings
-case class APPEND(key: Key, value: ByteString) extends RecognisedCommand(key, RBulkString(value)) with IntegerExpected
+case class APPEND(key: Key, value: ByteString) extends RecognisedCommand(key, value) with IntegerExpected
 case class GET(key: Key) extends RecognisedCommand(key) with BulkExpected
 
-sealed abstract class ExpirationPolicy(flag: String, duration: Long) { val args = Seq(RSimpleString(flag), RInteger(duration)) }
-case class ExpiresInSeconds(seconds: Long) extends ExpirationPolicy("EX", seconds)
-case class ExpiresInMilliseconds(millis: Long) extends ExpirationPolicy("PX", millis)
+sealed abstract class ExpirationPolicy(flag: Constant, duration: Long) { val args = Seq[CommandArgument](flag, duration) }
+case class ExpiresInSeconds(seconds: Long) extends ExpirationPolicy(Constant("EX"), seconds)
+case class ExpiresInMilliseconds(millis: Long) extends ExpirationPolicy(Constant("PX"), millis)
 
-sealed abstract class CreationRestriction(flag: String) { val arg = RSimpleString(flag) }
-case object OnlyIfKeyDoesNotAlreadyExist extends CreationRestriction("NX")
-case object OnlyIfKeyAlreadyExists extends CreationRestriction("XX")
+sealed abstract class CreationRestriction(flag: Constant) { val arg = flag }
+case object OnlyIfKeyDoesNotAlreadyExist extends CreationRestriction(Constant("NX"))
+case object OnlyIfKeyAlreadyExists extends CreationRestriction(Constant("XX"))
 
-case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends RecognisedCommand(Seq(key, RBulkString(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
+case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends RecognisedCommand(Seq(key, StringArgument(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
 
 // Server
-case class CLIENT_SETNAME(connectionName: String) extends RecognisedCommand(RSimpleString(connectionName)) with OkStatusExpected
+case class CLIENT_SETNAME(connectionName: String) extends RecognisedCommand(connectionName) with OkStatusExpected
 
-sealed abstract class PersistenceModifier(flag: String) { val arg = RSimpleString(flag) }
-case object Save extends PersistenceModifier("SAVE")
-case object NoSave extends PersistenceModifier("NOSAVE")
+sealed abstract class PersistenceModifier(flag: Constant) { val arg = flag }
+case object Save extends PersistenceModifier(Constant("SAVE"))
+case object NoSave extends PersistenceModifier(Constant("NOSAVE"))
 
 case class SHUTDOWN(forcePersistence: Option[PersistenceModifier] = None) extends RecognisedCommand(forcePersistence.map(_.arg).toSeq: _*) with ConnectionCloseExpected
 

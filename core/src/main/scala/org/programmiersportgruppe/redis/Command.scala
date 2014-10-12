@@ -6,29 +6,28 @@ import org.programmiersportgruppe.redis.Command._
 
 
 object Command {
-  type Argument = RScalar with RSuccessValue
 
   case class Name(override val toString: String) {
-    val asRSimpleStrings: Seq[RSimpleString] = toString.split(" ").toSeq.map(RSimpleString(_))
+    val asConstants: Seq[Constant] = toString.split(" ").toSeq.map(Constant)
   }
 }
 
 trait Command {
   val name: Name
-  val arguments: Seq[Argument]
+  val arguments: Seq[CommandArgument]
 
-  def nameAndArguments: Seq[Argument] = name.asRSimpleStrings ++ arguments
-  def asRArray: RArray = RArray(nameAndArguments.map(_.asRBulkString))
+  def nameAndArguments: Seq[CommandArgument] = name.asConstants ++ arguments
   def asCliString: String = nameAndArguments.mkString(" ")
 
   def execute(implicit redis: RedisAsync): Future[RSuccessValue] = redis.execute(this)
 }
 
-case class UntypedCommand(name: Name, arguments: Seq[Argument]) extends Command {
+
+case class UntypedCommand(name: Name, arguments: Seq[CommandArgument]) extends Command {
 
   override def toString = "UntypedCommand: " + asCliString
 }
 
 object UntypedCommand {
-  def apply(name: String, arguments: Argument*): UntypedCommand = new UntypedCommand(Name(name), arguments)
+  def apply(name: String, arguments: CommandArgument*): UntypedCommand = new UntypedCommand(Name(name), arguments)
 }
