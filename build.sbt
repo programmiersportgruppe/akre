@@ -1,6 +1,6 @@
 name := "akre"
 
-version := "0.11.0"
+version := "0.12.0"
 
 description := "A Redis client for Scala, implemented using Akka."
 
@@ -9,12 +9,12 @@ homepage := Some(url("https://github.com/programmiersportgruppe/akre"))
 organization := "org.programmiersportgruppe"
 
 
-crossScalaVersions := Seq("2.10.4", "2.11.2")
+crossScalaVersions := Seq("2.10.4", "2.11.4")
 
 scalaVersion := crossScalaVersions.value.head
 
 
-lazy val akkaVersion = Def.setting("2.3.6")
+lazy val akkaVersion = Def.setting("2.3.7")
 
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
