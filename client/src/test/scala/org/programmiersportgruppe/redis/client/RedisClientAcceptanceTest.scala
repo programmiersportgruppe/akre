@@ -15,9 +15,18 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   behavior of "A Redis client"
 
-
-  it should "return stored keys" in {
-    withRedisServer { serverAddress =>
+  for ((protocol, addressLength) <- Seq(
+    "IPv4" -> 4,
+    "IPv6" -> 16
+  ))
+  it should s"return stored keys over $protocol" in {
+    import ActorSystemAcceptanceTest.LoopbackAddresses
+    val loopbackAddress = LoopbackAddresses.find(_.getAddress.length == addressLength)
+    assume(loopbackAddress.isDefined,
+      s"Couldn't find $protocol address ($addressLength bytes) among ${LoopbackAddresses.size} loopback addresse(s):" +
+        LoopbackAddresses.map(_ + "\n    ").mkString
+    )
+    withRedisServer(loopbackAddress.get) { serverAddress =>
       withActorSystem { actorSystem =>
         implicit val client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 3.seconds, 3.seconds, 1)
         client.waitUntilConnected(5.seconds)
