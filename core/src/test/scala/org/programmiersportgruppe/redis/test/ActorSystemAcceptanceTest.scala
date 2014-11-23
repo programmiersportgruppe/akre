@@ -1,7 +1,8 @@
 package org.programmiersportgruppe.redis.test
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{InetAddress, InetSocketAddress, NetworkInterface}
 import java.util.concurrent.atomic.AtomicInteger
+import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Awaitable, Future, Promise}
 import scala.concurrent.duration._
 import scala.sys.process.ProcessLogger
@@ -12,20 +13,30 @@ import com.typesafe.config.ConfigFactory
 
 
 object ActorSystemAcceptanceTest {
+  val LoopbackAddresses: Seq[InetAddress] =
+    NetworkInterface.getNetworkInterfaces().asScala
+      .filter(_.isLoopback)
+      .flatMap(_.getInetAddresses.asScala)
+      .toSeq
+
   val nextRedisServerPort = new AtomicInteger(4321)
 }
 
 class ActorSystemAcceptanceTest extends Test {
+  import ActorSystemAcceptanceTest._
 
   implicit val executionContext = scala.concurrent.ExecutionContext.global
   implicit val timeout: Timeout = 5.seconds
 
   def await(awaitable: Awaitable[_]) = Await.result(awaitable, 5.seconds)
 
-  lazy val redisServerPort = ActorSystemAcceptanceTest.nextRedisServerPort.getAndIncrement
+  lazy val redisServerPort = nextRedisServerPort.getAndIncrement
 
-  def withRedisServer[A](testCode: InetSocketAddress => A): A = {
-    val address = new InetSocketAddress(InetAddress.getLoopbackAddress, redisServerPort)
+  def withRedisServer[A](testCode: InetSocketAddress => A): A =
+    withRedisServer(LoopbackAddresses.head)(testCode)
+
+  def withRedisServer[A](serverBindAddress: InetAddress)(testCode: InetSocketAddress => A): A = {
+    val address = new InetSocketAddress(serverBindAddress, redisServerPort)
 
     val output = new StringBuilder
     val serverReady = Promise[Unit]()
