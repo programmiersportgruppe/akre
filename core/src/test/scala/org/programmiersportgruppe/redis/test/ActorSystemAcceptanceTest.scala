@@ -30,7 +30,7 @@ class ActorSystemAcceptanceTest extends Test {
     val output = new StringBuilder
     val serverReady = Promise[Unit]()
 
-    val server = sys.process.Process(Seq("/usr/local/bin/redis-server"
+    val server = sys.process.Process(Seq("redis-server"
       , "--port", address.getPort.toString
       , "--bind", address.getAddress.getHostAddress
       , "--save", ""  // disable saving state to disk
