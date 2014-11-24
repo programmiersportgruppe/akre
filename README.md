@@ -8,10 +8,12 @@ with command pipelining and convenient Actor and Future APIs.
 Status
 ------
 
-Consider this alpha software.
-Only a handful of commands are implemented,
-and Akre has not yet been used in production.
-I hope that both of these will change very soon.
+[![Build Status](https://travis-ci.org/programmiersportgruppe/akre.svg?branch=master)](https://travis-ci.org/programmiersportgruppe/akre)
+
+Consider this beta software.
+Akre is being used in production,
+but currently only a handful of commands have strongly-typed representations,
+and the interface is subject to change.
 
 
 Why?
