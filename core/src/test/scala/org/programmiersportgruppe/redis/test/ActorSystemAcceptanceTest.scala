@@ -33,17 +33,16 @@ class ActorSystemAcceptanceTest extends Test {
   lazy val redisServerPort = nextRedisServerPort.getAndIncrement
 
   def withRedisServer[A](testCode: InetSocketAddress => A): A =
-    withRedisServer(LoopbackAddresses.head)(testCode)
+    withRedisServer(new InetSocketAddress(LoopbackAddresses.head, redisServerPort))(testCode)
 
-  def withRedisServer[A](serverBindAddress: InetAddress)(testCode: InetSocketAddress => A): A = {
-    val address = new InetSocketAddress(serverBindAddress, redisServerPort)
+  def withRedisServer[A](address: InetSocketAddress)(testCode: InetSocketAddress => A): A = {
 
     val output = new StringBuilder
     val serverReady = Promise[Unit]()
 
     val server = sys.process.Process(Seq("redis-server"
       , "--port", address.getPort.toString
-      , "--bind", address.getAddress.getHostAddress
+      , "--bind", Option(address.getAddress).fold(address.getHostName)(_.getHostAddress)
       , "--save", ""  // disable saving state to disk
     )).run(ProcessLogger { line =>
       while(

@@ -1,5 +1,6 @@
 package org.programmiersportgruppe.redis.client
 
+import java.net.InetSocketAddress
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
 
@@ -12,9 +13,9 @@ import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.commands.CLIENT_SETNAME
 
 
-class RedisClient(actorRefFactory: ActorRefFactory, hostName: String, hostPort: Int, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") extends RedisAsync {
-  def this(actorRefFactory: ActorRefFactory, hostName: String, hostPort: Int, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
-    this(actorRefFactory, hostName, hostPort, connectTimeout, requestTimeout, numberOfConnections, Seq(CLIENT_SETNAME(initialClientName)), poolActorName)
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") extends RedisAsync {
+  def this(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
+    this(actorRefFactory, serverAddress, connectTimeout, requestTimeout, numberOfConnections, Seq(CLIENT_SETNAME(initialClientName)), poolActorName)
 
   import akka.pattern.ask
 
@@ -22,7 +23,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, hostName: String, hostPort: 
   implicit private val timeout = requestTimeout
 
   private val poolActor = {
-    val connection = RedisConnectionActor.props(hostName, hostPort, connectionSetupCommands, Some(Ready))
+    val connection = RedisConnectionActor.props(serverAddress, connectionSetupCommands, Some(Ready))
 
     val pool = ResilientPool.props(
       childProps = connection,

@@ -1,5 +1,6 @@
 package org.programmiersportgruppe.redis.client
 
+import java.net.InetSocketAddress
 import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration._
 import scala.util.Failure
@@ -12,23 +13,20 @@ import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
 
 
 class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
+  import ActorSystemAcceptanceTest.LoopbackAddresses
 
   behavior of "A Redis client"
 
-  for ((protocol, addressLength) <- Seq(
-    "IPv4" -> 4,
-    "IPv6" -> 16
+  for ((description, address) <- Seq(
+    "over IPv4" ->  LoopbackAddresses.find(_.getAddress.length == 4).map(new InetSocketAddress(_, redisServerPort)),
+    "over IPv6" -> LoopbackAddresses.find(_.getAddress.length == 16).map(new InetSocketAddress(_, redisServerPort)),
+    "with unresolved InetSocketAddress" -> Some(InetSocketAddress.createUnresolved("localhost", redisServerPort))
   ))
-  it should s"return stored keys over $protocol" in {
-    import ActorSystemAcceptanceTest.LoopbackAddresses
-    val loopbackAddress = LoopbackAddresses.find(_.getAddress.length == addressLength)
-    assume(loopbackAddress.isDefined,
-      s"Couldn't find $protocol address ($addressLength bytes) among ${LoopbackAddresses.size} loopback addresse(s):" +
-        LoopbackAddresses.map(_ + "\n    ").mkString
-    )
-    withRedisServer(loopbackAddress.get) { serverAddress =>
+  it should s"return stored keys when connecting $description" in {
+    require(address.isDefined)
+    withRedisServer(address.get) { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
         client.waitUntilConnected(5.seconds)
 
         val retrieved = for {
@@ -45,7 +43,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "delete stored keys" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
         client.waitUntilConnected(5.seconds)
 
         val deleted = for {
@@ -62,7 +60,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "not hang forever on construction when unable to reach the server" in {
     withActorSystem { actorSystem =>
       implicit val client = within(100.milliseconds) {
-        new RedisClient(actorSystem, "localhost", 1, 1.second, 3.seconds, 1)
+        new RedisClient(actorSystem, new InetSocketAddress("localhost", 1), 1.second, 3.seconds, 1)
       }
       intercept[TimeoutException] {
         client.waitUntilConnected(1.second)
@@ -83,7 +81,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       implicit var client: RedisClient = null
 
       withRedisServer { serverAddress =>
-        client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 1.second, 3.seconds, 1)
+        client = new RedisClient(actorSystem, serverAddress, 1.second, 3.seconds, 1)
         client.waitUntilConnected(1.second)
 
         assertResult(RSimpleString.OK) {
@@ -111,7 +109,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       implicit var client: RedisClient = null
 
       withRedisServer { serverAddress =>
-        client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 50.milliseconds, 3.seconds, 1)
+        client = new RedisClient(actorSystem, serverAddress, 50.milliseconds, 3.seconds, 1)
         client.waitUntilConnected(1.second)
 
         await(SHUTDOWN().executeConnectionClose)
@@ -131,7 +129,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "send connection setup commands once per client" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress.getHostName, serverAddress.getPort, 3.seconds, 3.seconds, 3, Seq(APPEND(Key("song"), ByteString("La"))))
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 3, Seq(APPEND(Key("song"), ByteString("La"))))
         client.waitUntilConnected(5.seconds)
 
         eventually {

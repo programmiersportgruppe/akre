@@ -17,11 +17,11 @@ object RedisConnectionActor {
   case class UnableToConnectException(connectMessage: Tcp.Connect) extends RuntimeException("Unable to connect to Redis server with " + connectMessage)
   case class UnexpectedlyClosedException(closedEvent: Tcp.ConnectionClosed, pendingCommands: Seq[(ActorRef, Command)]) extends RuntimeException(s"Connection to Redis server unexpectedly closed with ${pendingCommands.length} command(s) pending: $closedEvent")
 
-  def props(hostName: String, hostPort: Int, connectionSetupCommands: Seq[Command] = Nil, messageToParentOnConnected: Option[Any] = None): Props =
-    Props(classOf[RedisConnectionActor], hostName, hostPort, connectionSetupCommands, messageToParentOnConnected)
+  def props(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command] = Nil, messageToParentOnConnected: Option[Any] = None): Props =
+    Props(classOf[RedisConnectionActor], serverAddress, connectionSetupCommands, messageToParentOnConnected)
 }
 
-class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
+class RedisConnectionActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
   import org.programmiersportgruppe.redis.client.RedisConnectionActor._
 
   val log = Logging(context.system, this)
@@ -29,10 +29,11 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
   val pendingCommands = mutable.Queue[(ActorRef, Command)]()
   var replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
-  val address = new InetSocketAddress(hostName, hostPort)
-
-  log.debug("Connecting to Redis server host {} at IP {} port {}", hostName, address.getAddress.getHostAddress, hostPort)
-  IO(Tcp)(context.system) ! Tcp.Connect(address)
+  val remote =
+    if (serverAddress.isUnresolved) new InetSocketAddress(serverAddress.getHostName, serverAddress.getPort)
+    else serverAddress
+  log.debug("Connecting to Redis server at {}", remote)
+  IO(Tcp)(context.system) ! Tcp.Connect(remote)
 
   def receive = {
 
@@ -47,7 +48,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
       log.error(e.getMessage)
       throw e
 
-    case c @ Tcp.Connected(`address`, local) =>
+    case c @ Tcp.Connected(`remote`, local) =>
       val connection = sender()
       context.watch(connection)
       connection ! Tcp.Register(self)
@@ -60,7 +61,7 @@ class RedisConnectionActor(hostName: String, hostPort: Int, connectionSetupComma
       for (command <- connectionSetupCommands)
         executeCommand(command, Actor.noSender)
       messageToParentOnConnected.map(context.parent ! _)
-      log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", address, local)
+      log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
       unstashAll()
       context become {
         case command: Command =>
