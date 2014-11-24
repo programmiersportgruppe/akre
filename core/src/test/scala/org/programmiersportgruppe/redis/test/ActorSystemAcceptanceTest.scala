@@ -1,8 +1,7 @@
 package org.programmiersportgruppe.redis.test
 
-import java.net.{InetAddress, InetSocketAddress, NetworkInterface}
+import java.net.{InetAddress, InetSocketAddress}
 import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Awaitable, Future, Promise}
 import scala.concurrent.duration._
 import scala.sys.process.ProcessLogger
@@ -13,11 +12,12 @@ import com.typesafe.config.ConfigFactory
 
 
 object ActorSystemAcceptanceTest {
-  val LoopbackAddresses: Seq[InetAddress] =
-    NetworkInterface.getNetworkInterfaces().asScala
-      .filter(_.isLoopback)
-      .flatMap(_.getInetAddresses.asScala)
-      .toSeq
+  def addressIfReachable(address: String): Option[InetAddress] =
+    Option(InetAddress.getByName(address)).filter(_.isReachable(5000))
+
+  val IPv4LoopbackAddress = addressIfReachable("127.0.0.1")
+  val IPv6LoopbackAddress = addressIfReachable("::1")
+  val LoopbackAddress = IPv6LoopbackAddress orElse IPv4LoopbackAddress
 
   val nextRedisServerPort = new AtomicInteger(4321)
 }
@@ -33,7 +33,7 @@ class ActorSystemAcceptanceTest extends Test {
   lazy val redisServerPort = nextRedisServerPort.getAndIncrement
 
   def withRedisServer[A](testCode: InetSocketAddress => A): A =
-    withRedisServer(new InetSocketAddress(LoopbackAddresses.head, redisServerPort))(testCode)
+    withRedisServer(new InetSocketAddress(LoopbackAddress.get, redisServerPort))(testCode)
 
   def withRedisServer[A](address: InetSocketAddress)(testCode: InetSocketAddress => A): A = {
 
@@ -42,7 +42,7 @@ class ActorSystemAcceptanceTest extends Test {
 
     val server = sys.process.Process(Seq("redis-server"
       , "--port", address.getPort.toString
-      , "--bind", Option(address.getAddress).fold(address.getHostName)(_.getHostAddress)
+      , "--bind", Option(address.getAddress).fold(address.getHostName)(_.getHostAddress.replaceAll("%.*[a-zA-Z].*", ""))
       , "--save", ""  // disable saving state to disk
     )).run(ProcessLogger { line =>
       while(

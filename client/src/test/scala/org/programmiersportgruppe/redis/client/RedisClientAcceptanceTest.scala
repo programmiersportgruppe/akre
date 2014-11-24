@@ -13,13 +13,13 @@ import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
 
 
 class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
-  import ActorSystemAcceptanceTest.LoopbackAddresses
+  import ActorSystemAcceptanceTest._
 
   behavior of "A Redis client"
 
   for ((description, address) <- Seq(
-    "over IPv4" ->  LoopbackAddresses.find(_.getAddress.length == 4).map(new InetSocketAddress(_, redisServerPort)),
-    "over IPv6" -> LoopbackAddresses.find(_.getAddress.length == 16).map(new InetSocketAddress(_, redisServerPort)),
+    "over IPv4" -> IPv4LoopbackAddress.map(new InetSocketAddress(_, redisServerPort)),
+    "over IPv6" -> IPv6LoopbackAddress.map(new InetSocketAddress(_, redisServerPort)),
     "with unresolved InetSocketAddress" -> Some(InetSocketAddress.createUnresolved("localhost", redisServerPort))
   ))
   it should s"return stored keys when connecting $description" in {
