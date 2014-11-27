@@ -141,4 +141,53 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
     }
   }
 
+
+  it should "return the substring of the value stored at key" in {
+    withRedisServer { serverAddress =>
+      withActorSystem { actorSystem =>
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        client.waitUntilConnected(5.seconds)
+
+        val getRange = for {
+          s <- SET(Key("A key"), ByteString("This is a string")).execute
+          d <- GETRANGE(Key("A key"), 0, 3).executeString
+        } yield d
+
+        assertResult(Some("This")) { await(getRange) }
+      }
+    }
+  }
+
+  it should "return the substring of the value stored at key for negative range" in {
+    withRedisServer { serverAddress =>
+      withActorSystem { actorSystem =>
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        client.waitUntilConnected(5.seconds)
+
+        val getRange = for {
+          s <- SET(Key("A key"), ByteString("This is a string")).execute
+          d <- GETRANGE(Key("A key"), -3, -1).executeString
+        } yield d
+
+        assertResult(Some("ing")) { await(getRange) }
+      }
+    }
+  }
+
+  it should "return the substring of the value stored at key for large ranges" in {
+    withRedisServer { serverAddress =>
+      withActorSystem { actorSystem =>
+        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        client.waitUntilConnected(5.seconds)
+
+        val getRange = for {
+          s <- SET(Key("A key"), ByteString("This is a string")).execute
+          d <- GETRANGE(Key("A key"), 10, 100).executeString
+        } yield d
+
+        assertResult(Some("string")) { await(getRange) }
+      }
+    }
+  }
+
 }
