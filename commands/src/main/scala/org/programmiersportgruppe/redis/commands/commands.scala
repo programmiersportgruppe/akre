@@ -49,6 +49,7 @@ case class EXPIRE(key: Key, seconds: Long) extends RecognisedCommand(key, second
 // Strings
 case class APPEND(key: Key, value: ByteString) extends RecognisedCommand(key, value) with IntegerExpected
 case class GET(key: Key) extends RecognisedCommand(key) with BulkExpected
+case class GETRANGE(key: Key, start: Long, end: Long) extends RecognisedCommand(key, start, end) with BulkExpected
 
 sealed abstract class ExpirationPolicy(flag: Constant, duration: Long) { val args = Seq[CommandArgument](flag, duration) }
 case class ExpiresInSeconds(seconds: Long) extends ExpirationPolicy(Constant("EX"), seconds)
