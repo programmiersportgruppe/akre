@@ -6,13 +6,47 @@ description := "A Redis client for Scala, implemented using Akka."
 
 homepage := Some(url("https://github.com/programmiersportgruppe/akre"))
 
-organization := "org.programmiersportgruppe"
+organization := "org.programmiersportgruppe.akre"
 
 
 crossScalaVersions := Seq("2.10.4", "2.11.4")
 
 scalaVersion := crossScalaVersions.value.head
 
+publishMavenStyle := true
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishArtifact in Test := false
+
+pomExtra := (
+  <licenses>
+    <license>
+      <name>MIT Licence</name>
+      <url>http://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+  <scm>
+    <url>git@github.com:programmiersportgruppe/akre.git</url>
+    <connection>scm:git:git@github.com:programmiersportgruppe/akre.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>barnardb</id>
+      <name>Ben Barnard</name>
+      <url>https://github.com/barnardb</url>
+    </developer>
+  </developers>)
+
+usePgpKeyHex("9EB14516DE778C96")
+
+useGpg := true
 
 lazy val akkaVersion = Def.setting("2.3.7")
 
@@ -85,3 +119,4 @@ lazy val client = project
 lazy val fake = project
   .dependsOn(commands, coreDependency)
   .settings(sharedSettings: _*)
+
