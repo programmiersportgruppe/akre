@@ -1,11 +1,12 @@
 package org.programmiersportgruppe.redis.commands
 
-import scala.concurrent.Future
-
 import akka.util.ByteString
-
-import org.programmiersportgruppe.redis._
+import org.programmiersportgruppe.redis.Command.Name
 import org.programmiersportgruppe.redis.CommandArgument.ImplicitConversions._
+import org.programmiersportgruppe.redis._
+
+import scala.concurrent.Future
+import scala.util.Try
 
 
 trait BulkExpected {
