@@ -9,7 +9,7 @@ class UntypedCommandTest extends Test {
   behavior of classOf[UntypedCommand].getName
 
   it should "have a short string representation" in {
-    assertResult("UntypedCommand: SET zuh? <bytes=5> EX 7") {
+    assertResult("""UntypedCommand: SET "zuh?" "yays!" "EX" "7"""") {
       UntypedCommand("SET", Key("zuh?"), "yays!", Constant("EX"), 7).toString
     }
   }

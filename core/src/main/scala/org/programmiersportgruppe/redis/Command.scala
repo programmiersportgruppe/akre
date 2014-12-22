@@ -25,7 +25,7 @@ trait Command {
 
   def nameAndArguments: Seq[ByteString] = name.asConstants.map(_.asByteString) ++ arguments
 
-  def asCliString: String = nameAndArguments.mkString(" ")
+  def asCliString: String = arguments.map(_.utf8String).mkString(name.toString + " \"", "\" \"", "\"")
 
   def execute(implicit redis: RedisAsync): Future[RSuccessValue] = redis.execute(this)
 }

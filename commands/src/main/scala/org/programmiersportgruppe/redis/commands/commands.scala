@@ -38,7 +38,7 @@ sealed abstract class RecognisedCommand(val typedArguments: CommandArgument*) ex
   override val name = Command.Name(getClass.getSimpleName.replace('_', ' '))
   override val arguments = typedArguments.map(_.asByteString)
 
-  override def toString = "RecognisedCommand: " + asCliString
+  override def toString = "RecognisedCommand: " + typedArguments.mkString(name.toString + " ", " ", "")
 }
 
 object RecognisedCommand {
