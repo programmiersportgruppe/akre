@@ -23,7 +23,7 @@ Include the following line in your `build.sbt` to get started:
 
 
 ~~~ {.scala}
-libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.12.0"
+libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.13.0"
 ~~~
 
 
