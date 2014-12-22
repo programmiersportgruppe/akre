@@ -44,7 +44,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     val deadline = timeout.fromNow
 
     while ({
-      val queryTimeout = deadline.timeLeft max Duration.Zero
+      val queryTimeout = (deadline.timeLeft max Duration.Zero) + queryTolerance
       val Routees(routees) = Await.result(poolActor.ask(GetRoutees)(queryTimeout), queryTimeout)
       routees.length < minConnections
     }) {
