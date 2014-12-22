@@ -8,3 +8,6 @@ jdk:
     - openjdk7
     - openjdk6
 sudo: false
+cache:
+    directories:
+        - $HOME/.ivy2
