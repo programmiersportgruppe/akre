@@ -36,8 +36,6 @@ case class UntypedCommand(name: Name, arguments: Seq[ByteString]) extends Comman
 
 object UntypedCommand {
 
-  import org.programmiersportgruppe.redis.CommandArgument.ImplicitConversions._
-
   def apply(name: String, arguments: CommandArgument*): UntypedCommand =
     new UntypedCommand(Name(name), arguments.map(_.asByteString))
 
