@@ -28,7 +28,7 @@ tag="v${version}"
 
 sed -i "" -E 's/(.*"org.programmiersportgruppe.akre" %% "[^"]*" % ")[^"]*(.*)/\1'"${version}"'\2/' README.md
 
-git commit -a -m "Releasing ${version}."
+git commit -a -m "Releasing ${version}." || echo "Nothing to commit"
 
 git tag -f "${tag}"
 
