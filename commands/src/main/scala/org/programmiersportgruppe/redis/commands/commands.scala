@@ -1,11 +1,12 @@
 package org.programmiersportgruppe.redis.commands
 
-import scala.concurrent.Future
-
 import akka.util.ByteString
-
-import org.programmiersportgruppe.redis._
+import org.programmiersportgruppe.redis.Command.Name
 import org.programmiersportgruppe.redis.CommandArgument.ImplicitConversions._
+import org.programmiersportgruppe.redis._
+
+import scala.concurrent.Future
+import scala.util.Try
 
 
 trait BulkExpected {
@@ -33,12 +34,23 @@ trait BooleanIntegerExpected
 
 
 // TODO: Rename class
-sealed abstract class RecognisedCommand(override val arguments: CommandArgument*) extends Command {
+sealed abstract class RecognisedCommand(val typedArguments: CommandArgument*) extends Command {
   override val name = Command.Name(getClass.getSimpleName.replace('_', ' '))
+  override val arguments = typedArguments.map(_.asByteString)
 
-  override def toString = "RecognisedCommand: " + asCliString
+  override def toString = "RecognisedCommand: " + typedArguments.mkString(name.toString + " ", " ", "")
 }
 
+object RecognisedCommand {
+  def fromUntypedCommand(untyped: UntypedCommand): Option[RecognisedCommand] =
+    Try {
+      untyped match {
+        case UntypedCommand(Name("GET"), Seq(key)) => GET(Key(key))
+        case UntypedCommand(Name("SET"), Seq(key, value)) => SET(Key(key), value.asByteString)
+        case UntypedCommand(Name("DEL"), head +: tail) => DEL(Key(head), tail.map(Key(_)): _*)
+      }
+    }.toOption
+}
 
 // Keys
 case class DEL(key: Key, additionalKeys: Key*) extends RecognisedCommand(key +: additionalKeys: _*) with IntegerExpected
