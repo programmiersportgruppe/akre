@@ -71,6 +71,7 @@ val sharedSettings = Seq[Def.Setting[_]](
       </developer>
     </developers>
   },
+  testOptions in Test += Tests.Argument("-oF"),
   publishTo := mavenRepository(isSnapshot.value)
 )
 
