@@ -27,15 +27,25 @@ sbt "set version in ThisBuild := \"${version}\"" +test +publishSigned
 
 tag="v${version}"
 
+previous_release_tag=$( git describe --abbrev=0 || git describe --tags --abbrev=0 || git rev-list HEAD | tail -n 1 )
+
+
+git log ${previous_release_tag}..HEAD > /tmp/release-notes-candidate.txt
+
+vim /tmp/release-notes-candidate.txt
+
+release_notes=$(cat /tmp/release-notes-candidate.txt)
+
 git branch --force "release-${tag}"
 git checkout "release-${tag}"
 
 sed -i "" -E 's/(.*"org.programmiersportgruppe.akre" %% "[^"]*" % ")[^"]*(.*)/\1'"${version}"'\2/' README.md
 git commit -a -m "Releasing ${version}." || echo "Nothing to commit"
 
-git tag -f "${tag}"
+git tag -f "${tag}" --annotate --message "${release_notes}"
 
-git push origin "${tag}" "${tag}:master"
+
+git push origin "${tag}" "release-${tag}:master"
 
 git checkout master
 git pull --rebase
