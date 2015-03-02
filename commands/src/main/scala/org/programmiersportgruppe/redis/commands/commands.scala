@@ -35,7 +35,7 @@ trait BooleanIntegerExpected
 
 // TODO: Rename class
 sealed abstract class RecognisedCommand(val typedArguments: CommandArgument*) extends Command {
-  override val name = Command.Name(getClass.getSimpleName.replace('_', ' '))
+  override val name = Command.Name(getClass.getSimpleName.replace('_', ' ').replaceAll("\\$", ""))
   override val arguments = typedArguments.map(_.asByteString)
 
   override def toString = "RecognisedCommand: " + typedArguments.mkString(name.toString + " ", " ", "")
@@ -75,6 +75,7 @@ case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy]
 
 // Server
 case class CLIENT_SETNAME(connectionName: String) extends RecognisedCommand(connectionName) with OkStatusExpected
+case object FLUSHALL extends RecognisedCommand() with OkStatusExpected
 
 sealed abstract class PersistenceModifier(flag: Constant) { val arg = flag }
 case object Save extends PersistenceModifier(Constant("SAVE"))
