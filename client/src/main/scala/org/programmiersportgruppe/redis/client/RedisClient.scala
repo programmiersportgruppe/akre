@@ -13,6 +13,11 @@ import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.commands.CLIENT_SETNAME
 
 
+/**
+ * @define timeoutExplanation
+ *         If the connection pool fails to deliver a reply within the `requestTimeout`,
+ *         a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
+ */
 class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") extends RedisAsync {
   def this(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
     this(actorRefFactory, serverAddress, connectTimeout, requestTimeout, numberOfConnections, Seq(CLIENT_SETNAME(initialClientName)), poolActorName)
@@ -55,38 +60,27 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     }
   }
 
-  /**
-   * Executes a command.
-   *
-   * @param command the command to be executed
-   * @return a non-error reply from the server
-   * @throws ErrorReplyException if the server gives an error reply
-   * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
-   */
-  def execute(command: Command): Future[RSuccessValue] = (poolActor ? command).transform({
+  override def execute(command: Command): Future[RSuccessValue] = (poolActor ? command).transform({
     case (`command`, r: RSuccessValue) => r
     case (`command`, e: RError)        => throw new ErrorReplyException(command, e)
   }, {
     case e: Throwable => new RequestExecutionException(command, e)
   })
 
-
-  /**
-   * Executes a command that is expected to cause the server to close the connection.
-   *
-   * @param command the command to be executed
-   * @return a unit future that completes when the connection closes
-   * @throws AskTimeoutException if the connection pool fails to deliver a reply within the requestTimeout
-   */
-  def executeConnectionClose(command: Command): Future[Unit] = (poolActor ? command).transform({
-    case () => ()
+  override def executeConnectionClose(command: Command): Future[Unit] = (poolActor ? command).transform({
+    case ()    => ()
+    case (`command`, r: RSuccessValue) => throw new UnexpectedReplyException(command, r)
+    case (`command`, e: RError)        => throw new ErrorReplyException(command, e)
   }, {
     case e: Throwable => new RequestExecutionException(command, e)
   })
 
   /**
-   * Stops the connection pool used by the client.
-   * @throws AskTimeoutException if the connection pool fails to stop within 30 seconds
+   * Stops the connection pool used by the client,
+   * returning a unit future that is completed when the pool is stopped.
+   *
+   * If the connection pool fails to deliver a reply within 30 seconds,
+   * a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
    */
   def shutdown(): Future[Unit] = {
     akka.pattern.gracefulStop(poolActor, 30.seconds).map(_ => ())

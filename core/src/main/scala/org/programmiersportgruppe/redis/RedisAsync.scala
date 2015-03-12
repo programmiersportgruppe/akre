@@ -6,26 +6,42 @@ import akka.pattern.AskTimeoutException
 import akka.util.ByteString
 
 
+/**
+ * @define timeoutExplanation
+ */
 trait RedisAsync {
   implicit val executor: ExecutionContext
 
+  /**
+   * Executes a command, returning a future reply from the server.
+   *
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * $timeoutExplanation
+   */
   def execute(command: Command): Future[RSuccessValue]
 
   /**
-   * Executes a command that is expected to cause the server to close the connection.
+   * Executes a command that is expected to cause the server to close the connection,
+   * returning a unit future that is completed when the connection is closed.
    *
-   * @param command the command to be executed
-   * @return a unit future that completes when the connection closes
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * If the server sends any reply other than an error, a failed future containing an [[UnexpectedReplyException]] will be returned.
+   *
+   * $timeoutExplanation
    */
   def executeConnectionClose(command: Command): Future[Unit]
 
   /**
-   * Executes a command and extracts an optional akka.util.ByteString from the bulk reply that is expected.
+   * Executes a command and extracts an optional [[akka.util.ByteString]] from the expected [[RBulkString]] reply.
    *
-   * @param command the bulk reply command to be executed
-   * @throws ErrorReplyException      if the server gives an error reply
-   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
-   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * If the server sends any reply other than a bulk string or an error,
+   * a failed future containing an [[UnexpectedReplyException]] will be returned.
+   *
+   * $timeoutExplanation
    */
   def executeByteString(command: Command): Future[Option[ByteString]] =
     execute(command) map {
@@ -34,14 +50,14 @@ trait RedisAsync {
     }
 
   /**
-   * Executes a command and extracts an optional String from the UTF-8 encoded bulk reply that is
-   * expected.
+   * Executes a command and extracts an optional String from the expected UTF-8 encoded [[RBulkString]] reply.
    *
-   * @param command the bulk reply command to be executed
-   * @throws ???                      if the reply cannot be decoded as UTF-8
-   * @throws ErrorReplyException      if the server gives an error reply
-   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
-   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * If the server sends any reply other than a bulk string or an error,
+   * a failed future containing an [[UnexpectedReplyException]] will be returned.
+   *
+   * $timeoutExplanation
    */
   def executeString(command: Command): Future[Option[String]] =
     execute(command) map {
@@ -50,12 +66,14 @@ trait RedisAsync {
     }
 
   /**
-   * Executes a command and extracts a Long from the int reply that is expected.
+   * Executes a command and extracts a Long from the expected [[RInteger]] reply.
    *
-   * @param command the int reply command to be executed
-   * @throws ErrorReplyException      if the server gives an error reply
-   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
-   * @throws UnexpectedReplyException if the server gives a proper non-bulk reply
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * If the server sends any reply other than an integer or an error,
+   * a failed future containing an [[UnexpectedReplyException]] will be returned.
+   *
+   * $timeoutExplanation
    */
   def executeLong(command: Command): Future[Long] =
     execute(command) map {
@@ -66,10 +84,12 @@ trait RedisAsync {
   /**
    * Executes a command and verifies that it gets an "OK" status reply.
    *
-   * @param command the ok status reply command to be executed
-   * @throws ErrorReplyException      if the server gives an error reply
-   * @throws AskTimeoutException      if the connection pool fails to deliver a reply within the requestTimeout
-   * @throws UnexpectedReplyException if the server gives a proper reply that is not StatusReply("OK")
+   * If the server responds with an [[RError]], a failed future containing an [[ErrorReplyException]] will be returned.
+   *
+   * If the server sends any reply other than an "OK" status or an error,
+   * a failed future containing an [[UnexpectedReplyException]] will be returned.
+   *
+   * $timeoutExplanation
    */
   def executeSuccessfully(command: Command): Future[Unit] =
     execute(command) map {

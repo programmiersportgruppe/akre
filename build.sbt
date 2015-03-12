@@ -1,3 +1,5 @@
+import sbt.impl.GroupArtifactID
+
 crossScalaVersions := Seq("2.10.4", "2.11.5")
 
 scalaVersion := crossScalaVersions.value.head
@@ -72,6 +74,21 @@ val sharedSettings = Seq[Def.Setting[_]](
     </developers>
   },
   testOptions in Test += Tests.Argument("-oF"),
+  autoAPIMappings := true,
+  apiMappings ++= {
+    def jar(artifact: GroupArtifactID): Option[File] = {
+      val reference = CrossVersion(scalaVersion.value, scalaBinaryVersion.value)(artifact % "_")
+      (for {
+        entry <- (fullClasspath in Runtime).value ++ (fullClasspath in Test).value
+        module <- entry.get(moduleID.key)
+        if module.organization == reference.organization && module.name == reference.name
+      } yield entry.data).headOption
+    }
+    Seq[(GroupArtifactID, sbt.URL)](
+      "com.typesafe" %% "config" -> url("http://typesafehub.github.io/config/latest/api/"),
+      "com.typesafe.akka" %% "akka-actor" -> url(s"http://doc.akka.io/api/akka/${akkaVersion.value}/")
+    ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
+  },
   publishTo := mavenRepository(isSnapshot.value)
 )
 
