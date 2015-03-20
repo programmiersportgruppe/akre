@@ -5,6 +5,10 @@ crossScalaVersions := Seq("2.10.4", "2.11.5")
 scalaVersion := crossScalaVersions.value.head
 
 
+val previousVersion = settingKey[Option[String]]("The artifact version for MiMa to compare against when checking for binary incompatibilities prior to release.") in GlobalScope
+
+previousVersion := None
+
 publishMavenStyle := true
 
 publishArtifact := false
@@ -27,7 +31,7 @@ lazy val akkaVersion = Def.setting("2.3.9")
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
 
-val sharedSettings = Seq[Def.Setting[_]](
+val sharedSettings = com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettings ++ Seq[Def.Setting[_]](
   name := "akre-" + name.value,
   homepage := Some(url("https://github.com/programmiersportgruppe/akre")),
   scmInfo := Some(ScmInfo(
@@ -89,6 +93,7 @@ val sharedSettings = Seq[Def.Setting[_]](
       "com.typesafe.akka" %% "akka-actor" -> url(s"http://doc.akka.io/api/akka/${akkaVersion.value}/")
     ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
   },
+  com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact := previousVersion.value.map(v => CrossVersion(scalaVersion.value, scalaBinaryVersion.value)(projectID.value.copy(revision = v, explicitArtifacts = Nil))),
   publishTo := mavenRepository(isSnapshot.value)
 )
 

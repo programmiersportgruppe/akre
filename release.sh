@@ -5,6 +5,10 @@ set -u
 set -o pipefail
 
 
+usage() {
+    echo "usage: $0 [--major | --minor | --patch | <version>]"
+}
+
 error() {
     echo "Error: $1"
     if [ $# -gt 1 ]; then
@@ -14,13 +18,34 @@ error() {
     exit 1
 } >&2
 
+change=explicit
+ignore_breakages=false
 
+set-change() {
+    [ "$1" != "${change}" ] || return
+    [ "${change}" = explicit ] || error "multiple version specifiers (got ${change} and now getting $*)" "$(usage)"
+    change="$1"
+}
 
-[ -n "${1-}" ] || error "missing parameter version"
+while (( $# > 0 )); do
+    case "$1" in
+        --ignore-breakages) ignore_breakages=true;;
+        --major) set-change major;;
+        --minor) set-change minor;;
+        --patch) set-change patch;;
+        -'?' | --help) show_help; exit 0;;
+        --) shift; break;;
+        -*) error "unknown option $1" "$(usage)" "" "Use -? or --help for help, or -- to separate arguments from options";;
+        *) break;;
+    esac
+    shift
+done
 
-version="$1"
-tag="v${version}"
-
+case $# in
+    0) [ "${change}" != explicit ] || error "missing version specifier" "$(usage)";;
+    1) set-change explicit "$1"; version="$1";;
+    *) error "too many arguments";;
+esac
 
 
 dirty=$(git status --porcelain)
@@ -40,6 +65,28 @@ echo "Found upstream branch ${remote_branch} on remote ${remote}"
 echo "Fetching…"
 git fetch
 
+previous_release_tag="$(git describe --tags --match="v*" --abbrev=0 2>/dev/null ||:)"
+previous_release_version="${previous_release_tag#v}"
+typeset -i major minor patch
+major="${previous_release_version%%.*}"
+patch="${previous_release_version##*.}"
+minor="${previous_release_version:$((${#major}+1)):$((${#previous_release_version}-${#major}-${#patch}-2))}"
+[ "v${major}.${minor}.${patch}" = "${previous_release_tag}" ] || error "previous release tag ${previous_release_tag} was reconstructed as v${major}.${minor}.${patch} after parsing"
+
+if [ "${change}" = explicit ]; then
+    error "explicit version releases aren't yet implemented; you might want to edit the release script to have it do the right thing"
+else
+    let "${change}++"
+    version="${major}.${minor}.${patch}"
+fi
+
+tag="v${version}"
+if [ -z "${previous_release_tag}" ]; then
+    echo "This is the first release, and will be tagged as ${tag}"
+else
+    echo "The previous release was tagged as ${previous_release_tag}, and this one will be tagged as ${tag}"
+fi
+
 release_commit="$(git rev-parse HEAD)"
 echo "Building and releasing commit ${release_commit} as ${tag}"
 
@@ -49,20 +96,13 @@ echo "Upstream ${upstream} is at ${upstream_commit}"
 merge_base="$(git merge-base "${release_commit}" "${upstream_commit}")"
 [ "${merge_base}" = "${release_commit}" ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
 
-previous_release_tag="$(git describe --tags --match="v*" --abbrev=0 2>/dev/null ||:)"
-if [ -z "${previous_release_tag}" ]; then
-    echo "This is the first release, and will be tagged as ${tag}"
-else
-    echo "The previous release was tagged as ${previous_release_tag}, and this one will be tagged as ${tag}"
-fi
-
 
 
 echo "Pruning target directories…"
 find . -name target -prune -exec rm -r {} \;
 
 echo "Building and publishing…"
-sbt "set version in ThisBuild := \"${version}\"" +test +publishSigned
+sbt "set previousVersion in Global := Some(\"${previous_release_version}\")" "set version in Global := \"${version}\"" +test +mimaReportBinaryIssues +publishSigned
 
 dirty=$(git status --porcelain)
 [ -z "${dirty}" ] || error "building and releasing made the repository dirty! Please fix this tragedy and then tag the release and update the readme." "${dirty}"
