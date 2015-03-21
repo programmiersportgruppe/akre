@@ -65,7 +65,7 @@ pgpPublicRing := Path.userHome / ".gnupg" / "pubring.pgp"
 
 // Your passphrase as array of Char (None => prompt for passphrase, Some(Array()) => no passphrase)
 pgpPassphrase := Some(Array('S', 'e', 'c', 'r', 'e', 't'))
-~~~ {.scala}
+~~~
 
 
 Publishing to Sonotype Nexus Repository
