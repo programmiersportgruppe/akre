@@ -19,7 +19,8 @@ error() {
 } >&2
 
 change=explicit
-ignore_breakages=false
+ignore_unpushed_commits=false
+ignore_upstream_updates=false
 
 set-change() {
     [ "$1" != "${change}" ] || return
@@ -29,7 +30,8 @@ set-change() {
 
 while (( $# > 0 )); do
     case "$1" in
-        --ignore-breakages) ignore_breakages=true;;
+        --ignore-unpushed-commits) ignore_unpushed_commits=true;;
+        --ignore-upstream-updates) ignore_upstream_updates=true;;
         --major) set-change major;;
         --minor) set-change minor;;
         --patch) set-change patch;;
@@ -71,7 +73,12 @@ upstream_commit="$(git rev-parse "${upstream}")"
 echo "Upstream ${upstream} is at ${upstream_commit}"
 
 merge_base="$(git merge-base "${release_commit}" "${upstream_commit}")"
-[ "${merge_base}" = "${release_commit}" ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
+[ "${merge_base}" = "${release_commit}" ] || [ "${ignore_unpushed_commits}" = true ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
+[ "${merge_base}" = "${upstream_commit}" ] || [ "${ignore_upstream_updates}" = true ] || error "merge-base is ${merge_base}, which is not the same as the current upstream commit. Please incorporate the upstream changes, or --ignore-upstream-updates."
+
+[ "${ignore_upstream_updates}" = true ] || {
+    [ "${merge_base}" = "${release_commit}" ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
+}
 
 previous_release_tag="$(git describe --tags --match="v*" --abbrev=0 2>/dev/null ||:)"
 previous_release_version="${previous_release_tag#v}"
