@@ -154,7 +154,7 @@ git branch --set-upstream-to="${upstream}"
 echo "Updating current version in README.md to ${version}"
 sed -i "" -E 's/(.*"org.programmiersportgruppe.akre" %% "[^"]*" % ")[^"]*(.*)/\1'"${version}"'\2/' README.md
 
-git commit -m "Update current version in README.md to ${version}"
+git commit -m "Update current version in README.md to ${version}" README.md
 
 git push "${remote}" "${branch}:${remote_branch}"
 
