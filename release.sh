@@ -106,10 +106,11 @@ else
         echo
         echo "Please replace this file's contents with release notes for ${tag}"
         echo
+        echo
         if [ -n "${previous_release_tag}" ]; then
             echo "Changes since ${previous_release_tag}:"
         fi
-        git log "${previous_release_tag}..${release_commit}"
+        git log --reverse "${previous_release_tag}..${release_commit}"
     } >"${release_notes_file}"
 fi
 "${EDITOR-vim}" "${release_notes_file}"
