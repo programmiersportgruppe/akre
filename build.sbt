@@ -1,8 +1,8 @@
 import sbt.impl.GroupArtifactID
 
-crossScalaVersions := Seq("2.10.4", "2.11.5")
+crossScalaVersions in Global := Seq("2.10.5", "2.11.6")
 
-scalaVersion := crossScalaVersions.value.head
+scalaVersion in Global := crossScalaVersions.value.head
 
 
 val previousVersion = settingKey[Option[String]]("The artifact version for MiMa to compare against when checking for binary incompatibilities prior to release.") in GlobalScope
@@ -58,7 +58,7 @@ val sharedSettings = com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettin
     "-Ywarn-numeric-widen",
 //    "-Ywarn-value-discard", // possibly more trouble than it's worth
     "-Xfuture") ++ (
-    if (scalaVersion.value.startsWith("2.10.")) Nil
+    if (scalaBinaryVersion.value == "2.10") Nil
     else Seq(
       "-explaintypes",
       "-Yconst-opt",
@@ -101,7 +101,7 @@ lazy val core = project
     description := "Core Redis abstractions for Akre.",
     libraryDependencies <+= akkaActor,  // for `akka.util.ByteString`
     libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.3" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 
 def coreDependency = core % "compile->compile;test->test"
