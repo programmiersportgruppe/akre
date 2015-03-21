@@ -21,14 +21,12 @@ Getting Started
 
 Include the following line in your `build.sbt` to get started:
 
-
 ~~~ {.scala}
 libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.13.0"
 ~~~
 
 
-Setting up the Actor System
----------------------------
+### Setting up the Actor System
 
 Akre uses a `ResilientPool` actor that manages a number of `RedisConnectionActor`s.
 The `ResilientPool` needs to be configured to a special mailbox type that helps it process messages efficiently.
@@ -119,6 +117,21 @@ don't forget to shut down the actor system if you're not using it for something 
 actorSystem.shutdown()
 ~~~
 
+
+Akre Development
+----------------
+
+Pull requests are welcome.
+
+You should run
+
+~~~ {.sh}
+sbt +test +doc
+~~~
+
+prior to pushing to validate your changes.
+
+### Releasing
 
 Why?
 ----

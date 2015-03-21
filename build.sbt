@@ -13,8 +13,6 @@ publishMavenStyle := true
 
 publishArtifact := false
 
-useGpg := true
-
 def mavenRepository(isSnapshot: Boolean): Some[MavenRepository] = {
   def nexus = "https://oss.sonatype.org/"
   if (isSnapshot)
