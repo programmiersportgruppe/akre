@@ -51,8 +51,10 @@ esac
 dirty=$(git status --porcelain)
 [ -z "${dirty}" ] || error "cannot release because these files are dirty:" "${dirty}"
 
-
+release_commit="$(git rev-parse HEAD)"
 starting_point="$(git rev-parse --abbrev-ref --symbolic-full-name HEAD)"
+echo "Building and releasing commit ${release_commit} (seen from starting point as ${starting_point})"
+
 
 upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}')"
 remote_branch="${upstream#*/}"
@@ -64,6 +66,12 @@ echo "Found upstream branch ${remote_branch} on remote ${remote}"
 
 echo "Fetching…"
 git fetch
+
+upstream_commit="$(git rev-parse "${upstream}")"
+echo "Upstream ${upstream} is at ${upstream_commit}"
+
+merge_base="$(git merge-base "${release_commit}" "${upstream_commit}")"
+[ "${merge_base}" = "${release_commit}" ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
 
 previous_release_tag="$(git describe --tags --match="v*" --abbrev=0 2>/dev/null ||:)"
 previous_release_version="${previous_release_tag#v}"
@@ -87,15 +95,26 @@ else
     echo "The previous release was tagged as ${previous_release_tag}, and this one will be tagged as ${tag}"
 fi
 
-release_commit="$(git rev-parse HEAD)"
-echo "Building and releasing commit ${release_commit} as ${tag}"
 
-upstream_commit="$(git rev-parse "${upstream}")"
-echo "Upstream ${upstream} is at ${upstream_commit}"
+mkdir -p cache/draft-release-notes
+release_notes_file="cache/draft-release-notes/${tag}-derived-from-${previous_release_tag}-to-${release_commit}.md"
+if [ -e "${release_notes_file}" ]; then
+    echo "Editing existing release notes in ${release_notes_file}"
+else
+    echo "Preparing release notes in ${release_notes_file}"
+    {
+        echo
+        echo "Please replace this file's contents with release notes for ${tag}"
+        echo
+        if [ -n "${previous_release_tag}" ]; then
+            echo "Changes since ${previous_release_tag}:"
+        fi
+        git log "${previous_release_tag}..${release_commit}"
+    } >"${release_notes_file}"
+fi
+"${EDITOR-vim}" "${release_notes_file}"
 
-merge_base="$(git merge-base "${release_commit}" "${upstream_commit}")"
-[ "${merge_base}" = "${release_commit}" ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
-
+release_notes="$(cat "${release_notes_file}")"
 
 
 echo "Pruning target directories…"
@@ -109,22 +128,10 @@ dirty=$(git status --porcelain)
 
 
 
-release_notes_file="$(mktemp -t release-notes-v1.0.0-candidate.txt)"
-{
-    echo "Please replace this file's contents with release notes for ${tag}"
-    echo
-    if [ -n "${previous_release_tag}" ]; then
-        echo "Changes since ${previous_release_tag}:"
-    fi
-    git log "${previous_release_tag}..HEAD"
-} >"${release_notes_file}"
-"${EDITOR-vim}" "${release_notes_file}"
-
-release_notes="$(cat "${release_notes_file}")"
-rm "${release_notes_file}"
-
+echo "Tagging as ${tag}"
 git tag -f "${tag}" --annotate --message "${release_notes}"
 
+echo "Pushing tag"
 git push "${remote}" "${tag}"
 
 
@@ -132,8 +139,9 @@ git push "${remote}" "${tag}"
 echo "Fetching to update README.md on latest ${upstream}"
 git fetch
 branch="release-branch-${tag}"
-git branch --force --track "${branch}" "${upstream}"
+git branch --force "${branch}" "${release_commit}"
 git checkout "${branch}"
+git branch --set-upstream-to="${upstream}"
 
 echo "Updating current version in README.md to ${version}"
 sed -i "" -E 's/(.*"org.programmiersportgruppe.akre" %% "[^"]*" % ")[^"]*(.*)/\1'"${version}"'\2/' README.md
@@ -152,3 +160,7 @@ git rebase
 
 echo "Deleting ${branch}"
 git branch -d "${branch}"
+
+echo "Removing all release notes drafts"
+rm cache/draft-release-notes/*.md
+rmdir cache/draft-release-notes
