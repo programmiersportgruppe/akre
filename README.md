@@ -25,52 +25,13 @@ Include the following line in your `build.sbt` to get started:
 libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.14.0"
 ~~~
 
-
-### Setting up the Actor System
-
-Akre uses a `ResilientPool` actor that manages a number of `RedisConnectionActor`s.
-The `ResilientPool` needs to be configured to a special mailbox type that helps it process messages efficiently.
-Since Akre uses [command pipelining] to efficiently handle many requests using a small number of connections,
-we recommend using Akka's [`PinnedDispatcher`] to give a dedicated thread to the pool and to each connection actor.
-
-[command pipelining]: http://redis.io/topics/pipelining
-[`PinnedDispatcher`]: http://doc.akka.io/docs/akka/snapshot/scala/dispatchers.html#Types_of_dispatchers
-
-Here is a minimal setup for the actor system:
-
-~~~ {.scala}
-val actorSystem = ActorSystem("akre-example", ConfigFactory.parseString(
-  """
-  akka {
-    loglevel = ERROR
-    log-dead-letters = 100
-    actor.debug.unhandled = on
-
-    actor.deployment {
-      /akre-redis-pool {
-        dispatcher = akre-coordinator-dispatcher
-      }
-      "/akre-redis-pool/*" {
-        dispatcher = akre-connection-dispatcher
-      }
-    }
-  }
-  akre-coordinator-dispatcher {
-    type = PinnedDispatcher
-    mailbox-type = org.programmiersportgruppe.redis.client.ResilientPoolMailbox
-  }
-  akre-connection-dispatcher {
-    type = PinnedDispatcher
-  }"""
-))
-~~~
+The easiest way to use Akre is through the `AkreClient` `Future`-based API described below.
+If you're interested in using Akre from other Akka actors,
+you can either directly use `RedisConnectionActor`, or use it through a `Resilient Pool` like `AkreClient` does.
 
 
-Using the Future Client API
----------------------------
-
-Application code implemented as Akka actors may use the `ResilientPool` or `RedisConnectionActor` actors directly.
-For use from outside the actor system, Akre provides a strongly typed API based on futures.
+Using the `AkreClient` API and Futures
+--------------------------------------
 
 Futures offer an elegant way of dealing with asynchronous requests,
 and the future API is arguably the easiest way to use Akre.
@@ -131,7 +92,8 @@ sbt +test +doc
 
 prior to pushing to validate your changes.
 
-### Releasing
+The release process is documented in [RELEASING.md](RELEASING.md).
+
 
 Why?
 ----

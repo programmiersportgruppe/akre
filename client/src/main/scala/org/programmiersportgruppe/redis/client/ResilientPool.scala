@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import akka.actor._
 import akka.actor.SupervisorStrategy.Stop
-import akka.dispatch.{PriorityGenerator, RequiresMessageQueue, UnboundedPriorityMailbox}
+import akka.dispatch._
 import akka.event.Logging
 import akka.routing._
 import com.typesafe.config.Config
@@ -27,8 +27,8 @@ object ResilientPool {
   case object RecruitWorkers
 }
 
-class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
-  extends UnboundedPriorityMailbox(PriorityGenerator {
+object ResilientPoolMailbox {
+  class MessageQueue extends UnboundedPriorityMailbox.MessageQueue(11, PriorityGenerator {
     // internal
     case Ready          => 1
     case Terminated(_)  => 2
@@ -38,12 +38,21 @@ class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
     case GetRoutees     => 10
     case _              => 20
   })
+}
+
+class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
+  extends MailboxType with ProducesMessageQueue[ResilientPoolMailbox.MessageQueue] {
+
+  override def create(owner: Option[ActorRef], system: Option[ActorSystem]): MessageQueue =
+    new ResilientPoolMailbox.MessageQueue()
+}
+
 
 class ResilientPool(childProps: Props,
                     size: Int,
                     creationCircuitBreakerLogic: CircuitBreakerLogic,
                     routingLogic: RoutingLogic)
-  extends Actor with RequiresMessageQueue[UnboundedPriorityMailbox.MessageQueue] {
+  extends Actor with RequiresMessageQueue[ResilientPoolMailbox.MessageQueue] {
 
   import context.dispatcher
 

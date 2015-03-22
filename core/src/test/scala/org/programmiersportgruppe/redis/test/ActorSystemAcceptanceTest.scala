@@ -78,22 +78,6 @@ class ActorSystemAcceptanceTest extends Test {
         loglevel = DEBUG
         log-dead-letters = 100
         actor.debug.unhandled = on
-
-        actor.deployment {
-          /akre-redis-pool {
-            dispatcher = akre-coordinator-dispatcher
-          }
-          "/akre-redis-pool/*" {
-            dispatcher = akre-connection-dispatcher
-          }
-        }
-      }
-      akre-coordinator-dispatcher {
-        type = PinnedDispatcher
-        mailbox-type = "${"org.programmiersportgruppe.redis.client.ResilientPoolMailbox" /*TODO: destrigify again: classOf[ResilientPoolMailbox].getName*/}"
-      }
-      akre-connection-dispatcher {
-        type = PinnedDispatcher
       }
       """
     ))
