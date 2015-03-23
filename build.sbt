@@ -9,6 +9,10 @@ val previousVersion = settingKey[Option[String]]("The artifact version for MiMa 
 
 previousVersion := None
 
+val failOnBinaryIncompatibility = settingKey[Boolean]("Whether the release should fail when a binary incompatibility is detected") in GlobalScope
+
+failOnBinaryIncompatibility := true
+
 publishMavenStyle := true
 
 publishArtifact := false
@@ -92,6 +96,7 @@ val sharedSettings = com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettin
     ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
   },
   com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact := previousVersion.value.map(v => CrossVersion(scalaVersion.value, scalaBinaryVersion.value)(projectID.value.copy(revision = v, explicitArtifacts = Nil))),
+  com.typesafe.tools.mima.plugin.MimaKeys.failOnProblem := failOnBinaryIncompatibility.value,
   publishTo := mavenRepository(isSnapshot.value)
 )
 

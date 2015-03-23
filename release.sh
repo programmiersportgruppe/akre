@@ -10,6 +10,7 @@ usage() {
 usage: $0 [options] [--major | --minor | --patch | [--] <version>]
 
     options:
+        --allow-binary-incompatibility
         --ignore-unpushed-commits
         --ignore-upstream-updates
 
@@ -30,6 +31,7 @@ usage-error() {
 }
 
 change=explicit
+fail_on_binary_incompatibility=true
 ignore_unpushed_commits=false
 ignore_upstream_updates=false
 
@@ -41,6 +43,7 @@ set-change() {
 
 while (( $# > 0 )); do
     case "$1" in
+        --allow-binary-incompatibility) fail_on_binary_incompatibility=false;;
         --ignore-unpushed-commits) ignore_unpushed_commits=true;;
         --ignore-upstream-updates) ignore_upstream_updates=true;;
         --major) set-change major;;
@@ -136,7 +139,14 @@ echo "Pruning target directories…"
 find . -name target -prune -exec rm -r {} \;
 
 echo "Building and publishing…"
-sbt "set previousVersion in Global := Some(\"${previous_release_version}\")" "set version in Global := \"${version}\"" +test +mimaReportBinaryIssues +publishSigned
+sbt \
+    "set previousVersion := Some(\"${previous_release_version}\")" \
+    "set version in Global := \"${version}\"" \
+    +test \
+    "set failOnBinaryIncompatibility := ${fail_on_binary_incompatibility}" \
+    +mimaReportBinaryIssues \
+    +publishSigned \
+    ;
 
 dirty=$(git status --porcelain)
 [ -z "${dirty}" ] || error "building and releasing made the repository dirty! Please fix this tragedy and then tag the release and update the readme." "${dirty}"
