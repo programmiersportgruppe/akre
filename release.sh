@@ -6,7 +6,14 @@ set -o pipefail
 
 
 usage() {
-    echo "usage: $0 [--major | --minor | --patch | <version>]"
+    cat <<EOF
+usage: $0 [options] [--major | --minor | --patch | [--] <version>]
+
+    options:
+        --ignore-unpushed-commits
+        --ignore-upstream-updates
+
+EOF
 }
 
 error() {
@@ -18,13 +25,17 @@ error() {
     exit 1
 } >&2
 
+usage-error() {
+    error "$1" "$(usage)" "" "Use -? or --help for help, or -- to separate arguments from options"
+}
+
 change=explicit
 ignore_unpushed_commits=false
 ignore_upstream_updates=false
 
 set-change() {
     [ "$1" != "${change}" ] || return
-    [ "${change}" = explicit ] || error "multiple version specifiers (got ${change} and now getting $*)" "$(usage)"
+    [ "${change}" = explicit ] || usage-error "multiple version specifiers (got ${change} and now getting $*)"
     change="$1"
 }
 
@@ -35,18 +46,18 @@ while (( $# > 0 )); do
         --major) set-change major;;
         --minor) set-change minor;;
         --patch) set-change patch;;
-        -'?' | --help) show_help; exit 0;;
+        -'?' | --help) usage; exit 0;;
         --) shift; break;;
-        -*) error "unknown option $1" "$(usage)" "" "Use -? or --help for help, or -- to separate arguments from options";;
+        -*) usage-error "unknown option $1";;
         *) break;;
     esac
     shift
 done
 
 case $# in
-    0) [ "${change}" != explicit ] || error "missing version specifier" "$(usage)";;
+    0) [ "${change}" != explicit ] || usage-error "missing version specifier";;
     1) set-change explicit "$1"; version="$1";;
-    *) error "too many arguments";;
+    *) usage-error "too many arguments";;
 esac
 
 
