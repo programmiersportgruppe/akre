@@ -8,8 +8,11 @@ import akka.util.Timeout
 object OpenPeriodStrategy {
   def doubling(first: FiniteDuration, max: FiniteDuration): Stream[FiniteDuration] = {
     require(first < max)
-    val double = first * 2
-    first #:: (if (double < max) doubling(double, max) else Stream.continually(max))
+    first #:: {
+      val double = first * 2
+      if (double < max) doubling(double, max)
+      else Stream.continually(max)
+    }
   }
 }
 
