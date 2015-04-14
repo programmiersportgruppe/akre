@@ -33,14 +33,14 @@ lazy val akkaVersion = Def.setting("2.3.9")
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
 
-val sharedSettings = com.typesafe.tools.mima.plugin.MimaPlugin.mimaDefaultSettings ++ Seq[Def.Setting[_]](
+val sharedSettings = mimaDefaultSettings ++ Seq[Def.Setting[_]](
   name := "akre-" + name.value,
   homepage := Some(url("https://github.com/programmiersportgruppe/akre")),
   scmInfo := Some(ScmInfo(
-    browseUrl   = new URL("https://github.com/programmiersportgruppe/akre"),
+    browseUrl   = url("https://github.com/programmiersportgruppe/akre"),
     connection  = "scm:git:git@github.com:programmiersportgruppe/akre.git"
   )),
-  licenses := Seq("MIT Licence" -> new URL("http://opensource.org/licenses/MIT")),
+  licenses := Seq("MIT Licence" -> url("http://opensource.org/licenses/MIT")),
   organization := "org.programmiersportgruppe.akre",
   conflictManager := ConflictManager.strict,
   dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
