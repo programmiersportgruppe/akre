@@ -12,7 +12,7 @@ usage: $0 [options] [--major | --minor | --patch | [--] <version>]
     options:
         --allow-binary-incompatibility
         --ignore-unpushed-commits
-        --ignore-upstream-updates
+        --ignore-upstream-commits
 
 EOF
 }
@@ -33,7 +33,7 @@ usage-error() {
 change=explicit
 fail_on_binary_incompatibility=true
 ignore_unpushed_commits=false
-ignore_upstream_updates=false
+ignore_upstream_commits=false
 
 set-change() {
     [ "$1" != "${change}" ] || return
@@ -45,7 +45,7 @@ while (( $# > 0 )); do
     case "$1" in
         --allow-binary-incompatibility) fail_on_binary_incompatibility=false;;
         --ignore-unpushed-commits) ignore_unpushed_commits=true;;
-        --ignore-upstream-updates) ignore_upstream_updates=true;;
+        --ignore-upstream-commits) ignore_upstream_commits=true;;
         --major) set-change major;;
         --minor) set-change minor;;
         --patch) set-change patch;;
@@ -88,7 +88,7 @@ echo "Upstream ${upstream} is at ${upstream_commit}"
 
 merge_base="$(git merge-base "${release_commit}" "${upstream_commit}")"
 [ "${merge_base}" = "${release_commit}" ] || [ "${ignore_unpushed_commits}" = true ] || error "merge-base is ${merge_base}, which is not the same as the release commit. Please ensure the release commit has been pushed upstream to ${upstream}."
-[ "${merge_base}" = "${upstream_commit}" ] || [ "${ignore_upstream_updates}" = true ] || error "merge-base is ${merge_base}, which is not the same as the current upstream commit. Please incorporate the upstream changes, or --ignore-upstream-updates."
+[ "${merge_base}" = "${upstream_commit}" ] || [ "${ignore_upstream_commits}" = true ] || error "merge-base is ${merge_base}, which is not the same as the current upstream commit. Please incorporate the upstream changes, or --ignore-upstream-commits."
 
 previous_release_tag="$(git describe --tags --match="v*" --abbrev=0 2>/dev/null ||:)"
 previous_release_version="${previous_release_tag#v}"
