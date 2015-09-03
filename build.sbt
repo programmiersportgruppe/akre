@@ -28,7 +28,7 @@ def mavenRepository(isSnapshot: Boolean): Some[MavenRepository] = {
 publishTo := mavenRepository(isSnapshot.value)
 
 
-lazy val akkaVersion = Def.setting("2.3.10")
+lazy val akkaVersion = Def.setting("2.3.12")
 
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
