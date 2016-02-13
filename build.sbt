@@ -1,6 +1,6 @@
 import sbt.impl.GroupArtifactID
 
-crossScalaVersions in Global := Seq("2.10.5", "2.11.6")
+crossScalaVersions in Global := Seq("2.10.6", "2.11.7")
 
 scalaVersion in Global := crossScalaVersions.value.head
 
@@ -28,7 +28,7 @@ def mavenRepository(isSnapshot: Boolean): Some[MavenRepository] = {
 publishTo := mavenRepository(isSnapshot.value)
 
 
-lazy val akkaVersion = Def.setting("2.3.12")
+lazy val akkaVersion = Def.setting("2.3.14")
 
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
@@ -106,7 +106,7 @@ lazy val core = project
     description := "Core Redis abstractions for Akre.",
     libraryDependencies <+= akkaActor,  // for `akka.util.ByteString`
     libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.5" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   )
 
 def coreDependency = core % "compile->compile;test->test"
@@ -125,7 +125,7 @@ lazy val protocol = project
   .settings(
     description := "A RESP (REdis Serialization Protocol) implementation.",
     libraryDependencies ++= (
-      if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3")
+      if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4")
       else Nil
     )
   )
