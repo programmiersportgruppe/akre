@@ -5,15 +5,26 @@ import scala.concurrent.duration.FiniteDuration
 import akka.util.Timeout
 
 
-object OpenPeriodStrategy {
-  def doubling(first: FiniteDuration, max: FiniteDuration): Stream[FiniteDuration] = {
-    require(first < max)
-    first #:: {
-      val double = first * 2
-      if (double < max) doubling(double, max)
-      else Stream.continually(max)
-    }
+object DurationProgression {
+
+  def doubling(first: FiniteDuration, max: FiniteDuration): DurationProgression =
+    exponential(2, first, max)
+
+  def exponential(base: Long, first: FiniteDuration, max: FiniteDuration): DurationProgression = {
+    require(base > 0, s"base (got $base) should greater than 1 to produce a monotonically increasing sequence")
+    require(first < max, s"the first duration (got $first) should be less than the max (got $max)")
+    new DurationProgression(first, { previous =>
+      previous * base match {
+        case d if d < max => d
+        case _            => max
+      }
+    })
   }
+
+}
+
+class DurationProgression(val head: FiniteDuration, computeNext: FiniteDuration => FiniteDuration) {
+  def tail: DurationProgression = new DurationProgression(computeNext(head), computeNext)
 }
 
 abstract class CircuitBreakerState {
@@ -22,13 +33,13 @@ abstract class CircuitBreakerState {
   def onFailure: CircuitBreakerState
 }
 
-class CircuitBreakerLogic(consecutiveFailureTolerance: Int, openPeriods: Stream[FiniteDuration], val halfOpenTimeout: Timeout) {
+class CircuitBreakerLogic(consecutiveFailureTolerance: Int, openDurations: DurationProgression, val halfOpenTimeout: Timeout) {
 
   class Closed(consecutiveFailures: Int) extends CircuitBreakerState {
     override def attemptOperation = this -> true
 
     override def onFailure =
-      if (consecutiveFailures == consecutiveFailureTolerance) new Open(openPeriods)
+      if (consecutiveFailures == consecutiveFailureTolerance) new Open(openDurations)
       else new Closed(consecutiveFailures + 1)
 
     override def onSuccess =
@@ -36,11 +47,11 @@ class CircuitBreakerLogic(consecutiveFailureTolerance: Int, openPeriods: Stream[
       else new Closed(0)
   }
 
-  class Open(periods: Stream[FiniteDuration]) extends CircuitBreakerState {
-    val deadline = periods.head.fromNow
+  class Open(durations: DurationProgression) extends CircuitBreakerState {
+    val deadline = durations.head.fromNow
 
     override def attemptOperation =
-      if (deadline.isOverdue()) new HalfOpen(periods.tail) -> true
+      if (deadline.isOverdue()) new HalfOpen(durations.tail) -> true
       else this -> false
 
     override def onFailure = this
@@ -48,26 +59,26 @@ class CircuitBreakerLogic(consecutiveFailureTolerance: Int, openPeriods: Stream[
     override def onSuccess = this
   }
 
-  class HalfOpen(nextOpenPeriods: Stream[FiniteDuration]) extends CircuitBreakerState {
+  class HalfOpen(openDurations: DurationProgression) extends CircuitBreakerState {
     val deadline = halfOpenTimeout.duration.fromNow
 
     override def attemptOperation = (
-      if (deadline.isOverdue()) new Open(nextOpenPeriods)
+      if (deadline.isOverdue()) new Open(openDurations)
       else this
     ) -> false
 
-    override def onFailure = new Open(nextOpenPeriods)
+    override def onFailure = new Open(openDurations)
 
     override def onSuccess =
-      if (deadline.isOverdue()) new Open(nextOpenPeriods)
+      if (deadline.isOverdue()) new Open(openDurations)
       else new Closed(0)
   }
 
 }
 
 class EventDrivenCircuitBreaker(logic: CircuitBreakerLogic) {
-  def this(consecutiveFailureTolerance: Int, openPeriods: Stream[FiniteDuration], halfOpenTimeout: FiniteDuration) =
-    this(new CircuitBreakerLogic(consecutiveFailureTolerance, openPeriods, halfOpenTimeout))
+  def this(consecutiveFailureTolerance: Int, openDurations: DurationProgression, halfOpenTimeout: FiniteDuration) =
+    this(new CircuitBreakerLogic(consecutiveFailureTolerance, openDurations, halfOpenTimeout))
 
   var state: CircuitBreakerState = new logic.Closed(0)
 

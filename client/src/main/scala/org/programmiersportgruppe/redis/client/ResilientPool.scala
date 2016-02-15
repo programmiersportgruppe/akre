@@ -20,7 +20,7 @@ case class EmptyPoolException(handlingMessage: Any) extends Exception("Unable to
 object ResilientPool {
   def props(childProps: Props,
             size: Int,
-            creationCircuitBreakerLogic: CircuitBreakerLogic = new CircuitBreakerLogic(2, OpenPeriodStrategy.doubling(1.second, 1.minute), 5.seconds),
+            creationCircuitBreakerLogic: CircuitBreakerLogic = new CircuitBreakerLogic(2, DurationProgression.doubling(1.second, 1.minute), 5.seconds),
             routingLogic: RoutingLogic = RoundRobinRoutingLogic()): Props =
     Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerLogic, routingLogic)
 

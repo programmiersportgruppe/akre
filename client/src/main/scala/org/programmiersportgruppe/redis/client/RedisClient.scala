@@ -35,7 +35,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
       size = numberOfConnections,
       creationCircuitBreakerLogic = new CircuitBreakerLogic(
         consecutiveFailureTolerance = 2,
-        openPeriods = OpenPeriodStrategy.doubling(100.milliseconds, 1.minute),
+        openDurations = DurationProgression.doubling(100.milliseconds, 1.minute),
         halfOpenTimeout = connectTimeout
       ),
       routingLogic = RoundRobinRoutingLogic()
