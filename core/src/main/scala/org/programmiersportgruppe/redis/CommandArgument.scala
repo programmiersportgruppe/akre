@@ -21,12 +21,12 @@ object CommandArgument {
 }
 
 
-case class Constant(override val toString: String) extends CommandArgument {
+final case class Constant(override val toString: String) extends CommandArgument {
   override def asByteString = toString
 }
 
 
-case class StringArgument(asByteString: ByteString) extends CommandArgument {
+final case class StringArgument(asByteString: ByteString) extends CommandArgument {
   override def toString = s"<bytes=${asByteString.size}>"
 }
 
@@ -35,18 +35,18 @@ object StringArgument {
 }
 
 
-case class Key(asByteString: ByteString) extends CommandArgument {
+final case class Key(asByteString: ByteString) extends CommandArgument {
   override def toString = asByteString.utf8String
 }
 
 
-case class IntegerArgument(value: Long) extends CommandArgument {
+final case class IntegerArgument(value: Long) extends CommandArgument {
   override def asByteString = value.toString
   override def toString = value.toString
 }
 
 
-case class DoubleArgument(value: Double) extends CommandArgument {
+final case class DoubleArgument(value: Double) extends CommandArgument {
   override def asByteString = value.toString
   override def toString = value.toString
 }

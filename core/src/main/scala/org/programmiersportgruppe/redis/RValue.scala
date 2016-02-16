@@ -13,7 +13,7 @@ sealed trait RSimpleScalar extends RScalar {
 }
 
 
-case class RError(value: String) extends RSimpleScalar {
+final case class RError(value: String) extends RSimpleScalar {
   override def asByteString = ByteString(value)
 
   def prefix: String = value.indexOf(' ') match {
@@ -26,7 +26,7 @@ case class RError(value: String) extends RSimpleScalar {
 sealed trait RSuccessValue extends RValue
 
 
-case class RSimpleString(value: String) extends RSuccessValue with RSimpleScalar {
+final case class RSimpleString(value: String) extends RSuccessValue with RSimpleScalar {
   override def asByteString = ByteString(value)
 }
 
@@ -35,7 +35,7 @@ object RSimpleString {
 }
 
 
-case class RInteger(value: Long) extends RSuccessValue with RSimpleScalar {
+final case class RInteger(value: Long) extends RSuccessValue with RSimpleScalar {
   override def asByteString = ByteString(value.toString)
 }
 
@@ -44,7 +44,7 @@ object RInteger {
 }
 
 
-case class RBulkString(data: Option[ByteString]) extends RSuccessValue with RScalar {
+final case class RBulkString(data: Option[ByteString]) extends RSuccessValue with RScalar {
   override def toString = data.fold("<null>")(d => s"<bytes=${d.size}>")
 }
 
@@ -56,4 +56,4 @@ object RBulkString {
 }
 
 
-case class RArray(items: Seq[RValue]) extends RSuccessValue
+final case class RArray(items: Seq[RValue]) extends RSuccessValue
