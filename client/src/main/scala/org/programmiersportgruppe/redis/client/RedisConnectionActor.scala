@@ -21,7 +21,7 @@ object RedisConnectionActor {
     Props(classOf[RedisConnectionActor], serverAddress, connectionSetupCommands, messageToParentOnConnected)
 }
 
-class RedisConnectionActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor with Stash {
+class RedisConnectionActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor {
   import org.programmiersportgruppe.redis.client.RedisConnectionActor._
 
   val log = Logging(context.system, this)
@@ -62,7 +62,6 @@ class RedisConnectionActor(serverAddress: InetSocketAddress, connectionSetupComm
         executeCommand(command, Actor.noSender)
       messageToParentOnConnected.map(context.parent ! _)
       log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
-      unstashAll()
       context become {
         case command: Command =>
           log.debug("Received command {}", command)
