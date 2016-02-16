@@ -9,24 +9,31 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-trait BulkExpected {
+trait SingleReplyExpected {
+  self: Command =>
+}
+
+trait BulkExpected extends SingleReplyExpected {
   self: Command =>
   def executeByteString(implicit redis: RedisAsync): Future[Option[ByteString]] = redis.executeByteString(this)
   def executeString(implicit redis: RedisAsync): Future[Option[String]] = redis.executeString(this)
 }
-trait IntegerExpected {
+trait IntegerExpected extends SingleReplyExpected {
   self: Command =>
   def executeLong(implicit redis: RedisAsync): Future[Long] = redis.executeLong(this)
 }
-trait OkStatusExpected {
+trait OkStatusExpected extends SingleReplyExpected {
   self: Command =>
   def executeSuccessfully(implicit redis: RedisAsync): Future[Unit] = redis.executeSuccessfully(this)
 }
+trait BooleanIntegerExpected extends SingleReplyExpected {
+  self: Command =>
+}
+
 trait ConnectionCloseExpected {
   self: Command =>
   def executeConnectionClose(implicit redis: RedisAsync): Future[Unit] = redis.executeConnectionClose(this)
 }
-trait BooleanIntegerExpected
 
 //sealed abstract class IntCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[IntegerReply](args)
 //sealed abstract class BooleanCommand(args: Seq[RedisCommandArgument]) extends DocumentedRedisCommand[IntegerReply](args)
@@ -58,6 +65,10 @@ case class DUMP(key: Key) extends RecognisedCommand(key) with BulkExpected
 case class EXISTS(key: Key) extends RecognisedCommand(key) with BooleanIntegerExpected
 case class EXPIRE(key: Key, seconds: Long) extends RecognisedCommand(key, seconds) with BooleanIntegerExpected
 
+// Pub/Sub
+case class PUBLISH(channel: ByteString, message: ByteString) extends RecognisedCommand(StringArgument(channel), StringArgument(message)) with SingleReplyExpected
+case class SUBSCRIBE(channel: ByteString, additionalChannels: ByteString*) extends RecognisedCommand((channel +: additionalChannels).map(StringArgument(_)): _*)
+
 // Strings
 case class APPEND(key: Key, value: ByteString) extends RecognisedCommand(key, value) with IntegerExpected
 case class GET(key: Key) extends RecognisedCommand(key) with BulkExpected
@@ -71,7 +82,7 @@ sealed abstract class CreationRestriction(flag: Constant) { val arg = flag }
 case object OnlyIfKeyDoesNotAlreadyExist extends CreationRestriction(Constant("NX"))
 case object OnlyIfKeyAlreadyExists extends CreationRestriction(Constant("XX"))
 
-case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends RecognisedCommand(Seq(key, StringArgument(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*)
+case class SET(key: Key, value: ByteString, expiration: Option[ExpirationPolicy] = None, restriction: Option[CreationRestriction] = None) extends RecognisedCommand(Seq(key, StringArgument(value)) ++ expiration.toSeq.flatMap(_.args) ++ restriction.map(_.arg): _*) with SingleReplyExpected
 
 // Server
 case class CLIENT_SETNAME(connectionName: String) extends RecognisedCommand(connectionName) with OkStatusExpected

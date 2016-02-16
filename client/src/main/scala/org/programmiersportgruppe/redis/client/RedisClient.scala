@@ -5,7 +5,6 @@ import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
 
 import akka.actor.ActorRefFactory
-import akka.pattern.AskTimeoutException
 import akka.routing._
 import akka.util.Timeout
 
