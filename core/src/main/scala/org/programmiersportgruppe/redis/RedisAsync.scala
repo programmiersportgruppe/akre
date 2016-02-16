@@ -2,7 +2,6 @@ package org.programmiersportgruppe.redis
 
 import scala.concurrent.{ExecutionContext, Future}
 
-import akka.pattern.AskTimeoutException
 import akka.util.ByteString
 
 
