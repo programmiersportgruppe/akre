@@ -28,7 +28,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
   implicit private val timeout = requestTimeout
 
   private val poolActor = {
-    val connection = RedisConnectionActor.props(serverAddress, connectionSetupCommands, Some(Ready))
+    val connection = RedisCommandReplyActor.props(serverAddress, connectionSetupCommands, Some(Ready))
 
     val pool = ResilientPool.props(
       childProps = connection,

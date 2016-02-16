@@ -9,7 +9,7 @@ import org.programmiersportgruppe.redis.commands.{GET, SET}
 import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
 
 
-class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
+class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
 
   behavior of "a connection to the Redis server"
 
@@ -17,7 +17,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
     withRedisServer { address =>
       withActorSystem { implicit system =>
         val kit = new TestKit(system)
-        val ref = TestActorRef(RedisConnectionActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
@@ -37,7 +37,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
     withRedisServer { address =>
       withActorSystem { implicit system =>
         val kit = new TestKit(system)
-        val ref = TestActorRef(RedisConnectionActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
@@ -63,7 +63,7 @@ class RedisConnectionActorTest extends ActorSystemAcceptanceTest {
         val setupCommands = List(
           SET(Key("A"), ByteString("ABC")),
           SET(Key("X"), ByteString("XYZ")))
-        val ref = TestActorRef(RedisConnectionActor.props(address, setupCommands, Some("ready")), kit.testActor, "SOT")
+        val ref = TestActorRef(RedisCommandReplyActor.props(address, setupCommands, Some("ready")), kit.testActor, "SOT")
         kit.expectMsg("ready")
 
         val getA = GET(Key("A"))
