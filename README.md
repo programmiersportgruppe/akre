@@ -22,7 +22,7 @@ Getting Started
 Include the following line in your `build.sbt` to get started:
 
 ~~~ {.scala}
-libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.15.0"
+libraryDependencies += "org.programmiersportgruppe.akre" %% "akre-client" % "0.16.0"
 ~~~
 
 The easiest way to use Akre is through the `AkreClient` `Future`-based API described below.
