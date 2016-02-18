@@ -1,8 +1,11 @@
 package org.programmiersportgruppe.redis.client
 
-class EventDrivenCircuitBreaker(options: CircuitBreakerOptions) {
+/** An event-driven circuit breaker with non-thread-safe state management,
+  * suitable for use from an actor.
+  */
+class EventDrivenCircuitBreaker(settings: CircuitBreakerSettings) {
 
-  private var state: CircuitBreakerState = new CircuitBreakerState.Closed(options)
+  private var state: CircuitBreakerState = new CircuitBreakerState.Closed(settings)
 
   def transitionTo(newState: CircuitBreakerState): Unit =
     if (state != newState) {

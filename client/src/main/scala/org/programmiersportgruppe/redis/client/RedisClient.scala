@@ -32,7 +32,7 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     val pool = ResilientPool.props(
       childProps = connection,
       size = numberOfConnections,
-      creationCircuitBreakerOptions = CircuitBreakerOptions(
+      creationCircuitBreakerSettings = CircuitBreakerSettings(
         consecutiveFailureTolerance = 2,
         openDurationProgression = DurationProgression.doubling(100.milliseconds, 1.minute),
         halfOpenTimeout = connectTimeout

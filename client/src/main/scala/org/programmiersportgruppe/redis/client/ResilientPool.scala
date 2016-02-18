@@ -20,9 +20,9 @@ case class EmptyPoolException(handlingMessage: Any) extends Exception("Unable to
 object ResilientPool {
   def props(childProps: Props,
             size: Int,
-            creationCircuitBreakerOptions: CircuitBreakerOptions = CircuitBreakerOptions(2, DurationProgression.doubling(1.second, 1.minute), 5.seconds),
+            creationCircuitBreakerSettings: CircuitBreakerSettings = CircuitBreakerSettings(2, DurationProgression.doubling(1.second, 1.minute), 5.seconds),
             routingLogic: RoutingLogic = RoundRobinRoutingLogic()): Props =
-    Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerOptions, routingLogic)
+    Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerSettings, routingLogic)
 
   case object RecruitWorkers
 }
@@ -50,7 +50,7 @@ class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
 
 class ResilientPool(childProps: Props,
                     size: Int,
-                    creationCircuitBreakerOptions: CircuitBreakerOptions,
+                    creationCircuitBreakerSettings: CircuitBreakerSettings,
                     routingLogic: RoutingLogic)
   extends Actor with RequiresMessageQueue[ResilientPoolMailbox.MessageQueue] {
 
@@ -60,7 +60,7 @@ class ResilientPool(childProps: Props,
   val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
   var router: Router = Router(routingLogic)
 
-  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerOptions) {
+  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerSettings) {
 
     var scheduledRecruitment: Option[Cancellable] = None
 
@@ -112,7 +112,7 @@ class ResilientPool(childProps: Props,
       if (creationCircuitBreaker.requestPermission()) {
         val worker = context.actorOf(childProps)
         context.watch(worker)
-        pendingWorkers.enqueue(worker -> creationCircuitBreakerOptions.halfOpenTimeout.fromNow)
+        pendingWorkers.enqueue(worker -> creationCircuitBreakerSettings.halfOpenTimeout.fromNow)
         log.info("New worker {} pending activation", worker)
       }
   }

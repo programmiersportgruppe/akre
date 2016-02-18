@@ -32,34 +32,34 @@ object CircuitBreakerState {
 
   /** The circuit breaker is closed, meaning operations may proceed.
     *
-    * @param options             the circuit breaker's options
+    * @param settings            the circuit breaker's settings
     * @param consecutiveFailures the number of failures we have seen since we last saw a successful completion
     */
-  final class Closed private(options: CircuitBreakerOptions, consecutiveFailures: Int) extends CircuitBreakerState {
-    def this(options: CircuitBreakerOptions) = this(options, 0)
+  final class Closed private(settings: CircuitBreakerSettings, consecutiveFailures: Int) extends CircuitBreakerState {
+    def this(options: CircuitBreakerSettings) = this(options, 0)
 
     override def attemptOperation = true -> this
 
     override def onFailure =
-      if (consecutiveFailures == options.consecutiveFailureTolerance) new Open(options, options.openDurationProgression)
-      else new Closed(options, consecutiveFailures + 1)
+      if (consecutiveFailures == settings.consecutiveFailureTolerance) new Open(settings, settings.openDurationProgression)
+      else new Closed(settings, consecutiveFailures + 1)
 
     override def onSuccess =
       if (consecutiveFailures == 0) this
-      else new Closed(options)
+      else new Closed(settings)
   }
 
   /** The circuit breaker is open, meaning that operations may not proceed
     *
-    * @param options          the circuit breaker's options
+    * @param settings         the circuit breaker's settings
     * @param currentDurations the progression of durations for which to remain open before allowing a transition to
     *                         half-open
     */
-  class Open private[CircuitBreakerState](options: CircuitBreakerOptions, currentDurations: DurationProgression) extends CircuitBreakerState {
+  class Open private[CircuitBreakerState](settings: CircuitBreakerSettings, currentDurations: DurationProgression) extends CircuitBreakerState {
     val deadline = currentDurations.head.fromNow
 
     override def attemptOperation =
-      if (deadline.isOverdue()) true -> new HalfOpen(options, currentDurations.tail)
+      if (deadline.isOverdue()) true -> new HalfOpen(settings, currentDurations.tail)
       else false -> this
 
     override def onFailure = this
@@ -70,23 +70,23 @@ object CircuitBreakerState {
   /** The circuit is half-open, meaning that it was open, but that a single test operation has been allowed to proceed
     * and we are waiting to find out whether it will be successful or not
     *
-    * @param options           the circuit breaker's options
+    * @param settings          the circuit breaker's settings
     * @param nextOpenDurations the progression of open durations to resume the open state with if we get a failure or timeout
     */
-  class HalfOpen private[CircuitBreakerState](options: CircuitBreakerOptions, nextOpenDurations: DurationProgression) extends CircuitBreakerState {
-    val deadline = options.halfOpenTimeout.fromNow
+  class HalfOpen private[CircuitBreakerState](settings: CircuitBreakerSettings, nextOpenDurations: DurationProgression) extends CircuitBreakerState {
+    val deadline = settings.halfOpenTimeout.fromNow
 
     override def attemptOperation =
       false -> {
-        if (deadline.isOverdue()) new Open(options, nextOpenDurations)
+        if (deadline.isOverdue()) new Open(settings, nextOpenDurations)
         else this
       }
 
-    override def onFailure = new Open(options, nextOpenDurations)
+    override def onFailure = new Open(settings, nextOpenDurations)
 
     override def onSuccess =
-      if (deadline.isOverdue()) new Open(options, nextOpenDurations)
-      else new Closed(options)
+      if (deadline.isOverdue()) new Open(settings, nextOpenDurations)
+      else new Closed(settings)
   }
 
 }

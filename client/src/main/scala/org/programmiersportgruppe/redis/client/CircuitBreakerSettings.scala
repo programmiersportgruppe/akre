@@ -2,7 +2,7 @@ package org.programmiersportgruppe.redis.client
 
 import scala.concurrent.duration.FiniteDuration
 
-/** Options to control a circuit breaker's behaviour
+/** Settings to control a circuit breaker's behaviour
   *
   * @param consecutiveFailureTolerance number of consecutive errors that will be tolerated before opening the circuit
   * @param openDurationProgression     progression of durations for which the circuit should be kept open between
@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
   * @param halfOpenTimeout             timeout after switching to half-open before the circuit will flip back to open if
   *                                    it hasn't received the result of the attempt
   */
-case class CircuitBreakerOptions(
+case class CircuitBreakerSettings(
     consecutiveFailureTolerance: Int,
     openDurationProgression: DurationProgression,
     halfOpenTimeout: FiniteDuration)
