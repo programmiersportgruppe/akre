@@ -17,8 +17,8 @@ import org.programmiersportgruppe.redis.commands.CLIENT_SETNAME
  *         If the connection pool fails to deliver a reply within the `requestTimeout`,
  *         a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
  */
-class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") extends RedisAsync {
-  def this(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: Timeout, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
+class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: FiniteDuration, requestTimeout: Timeout, numberOfConnections: Int, connectionSetupCommands: Seq[Command] = Nil, poolActorName: String = "akre-redis-pool") extends RedisAsync {
+  def this(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAddress, connectTimeout: FiniteDuration, requestTimeout: Timeout, numberOfConnections: Int, initialClientName: String, poolActorName: String) =
     this(actorRefFactory, serverAddress, connectTimeout, requestTimeout, numberOfConnections, Seq(CLIENT_SETNAME(initialClientName)), poolActorName)
 
   import akka.pattern.ask
@@ -32,9 +32,9 @@ class RedisClient(actorRefFactory: ActorRefFactory, serverAddress: InetSocketAdd
     val pool = ResilientPool.props(
       childProps = connection,
       size = numberOfConnections,
-      creationCircuitBreakerLogic = new CircuitBreakerLogic(
+      creationCircuitBreakerOptions = CircuitBreakerOptions(
         consecutiveFailureTolerance = 2,
-        openDurations = DurationProgression.doubling(100.milliseconds, 1.minute),
+        openDurationProgression = DurationProgression.doubling(100.milliseconds, 1.minute),
         halfOpenTimeout = connectTimeout
       ),
       routingLogic = RoundRobinRoutingLogic()

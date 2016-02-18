@@ -20,9 +20,9 @@ case class EmptyPoolException(handlingMessage: Any) extends Exception("Unable to
 object ResilientPool {
   def props(childProps: Props,
             size: Int,
-            creationCircuitBreakerLogic: CircuitBreakerLogic = new CircuitBreakerLogic(2, DurationProgression.doubling(1.second, 1.minute), 5.seconds),
+            creationCircuitBreakerOptions: CircuitBreakerOptions = CircuitBreakerOptions(2, DurationProgression.doubling(1.second, 1.minute), 5.seconds),
             routingLogic: RoutingLogic = RoundRobinRoutingLogic()): Props =
-    Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerLogic, routingLogic)
+    Props(classOf[ResilientPool], childProps, size, creationCircuitBreakerOptions, routingLogic)
 
   case object RecruitWorkers
 }
@@ -50,7 +50,7 @@ class ResilientPoolMailbox(settings: ActorSystem.Settings, config: Config)
 
 class ResilientPool(childProps: Props,
                     size: Int,
-                    creationCircuitBreakerLogic: CircuitBreakerLogic,
+                    creationCircuitBreakerOptions: CircuitBreakerOptions,
                     routingLogic: RoutingLogic)
   extends Actor with RequiresMessageQueue[ResilientPoolMailbox.MessageQueue] {
 
@@ -60,15 +60,15 @@ class ResilientPool(childProps: Props,
   val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
   var router: Router = Router(routingLogic)
 
-  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerLogic) {
+  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerOptions) {
 
     var scheduledRecruitment: Option[Cancellable] = None
 
     override def onStateChanged(newState: CircuitBreakerState): Unit = {
       scheduledRecruitment.foreach(_.cancel())
-      log.debug("Creation circuit breaker has changed to state " + state)
+      log.debug("Creation circuit breaker has changed to state " + newState)
 
-      import creationCircuitBreakerLogic._
+      import CircuitBreakerState._
       scheduledRecruitment = recruitAfter(newState match {
         case ho: HalfOpen => ho.deadline
         case o: Open => o.deadline
@@ -112,7 +112,7 @@ class ResilientPool(childProps: Props,
       if (creationCircuitBreaker.requestPermission()) {
         val worker = context.actorOf(childProps)
         context.watch(worker)
-        pendingWorkers.enqueue(worker -> creationCircuitBreakerLogic.halfOpenTimeout.duration.fromNow)
+        pendingWorkers.enqueue(worker -> creationCircuitBreakerOptions.halfOpenTimeout.fromNow)
         log.info("New worker {} pending activation", worker)
       }
   }
