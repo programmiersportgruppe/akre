@@ -113,6 +113,25 @@ else
 fi
 
 
+echo "Pruning target directories…"
+find . -name target -prune -exec rm -r {} \;
+
+echo "Building and publishing…"
+sbt \
+    "set previousVersion := Some(\"${previous_release_version}\")" \
+    "set version in Global := \"${version}\"" \
+    +mimaPreviousClassfiles \
+    +test \
+    "set failOnBinaryIncompatibility := ${fail_on_binary_incompatibility}" \
+    +mimaReportBinaryIssues \
+    +publishSigned \
+    ;
+
+dirty=$(git status --porcelain)
+[ -z "${dirty}" ] || error "building and releasing made the repository dirty! Please fix this tragedy and then tag the release and update the readme." "${dirty}"
+
+
+
 mkdir -p cache/draft-release-notes
 release_notes_file="cache/draft-release-notes/${tag}-derived-from-${previous_release_tag}-to-${release_commit}.md"
 if [ -e "${release_notes_file}" ]; then
@@ -128,28 +147,15 @@ else
             echo "Changes since ${previous_release_tag}:"
         fi
         git log --reverse "${previous_release_tag}..${release_commit}"
+        echo
+        echo
+        echo
+        find . -type f \( -path '*/mimaFindBinaryIssues/*' -o -path '*/mimaReportBinaryIssues/*' \) -print0 | xargs -0 cat
     } >"${release_notes_file}"
 fi
 "${EDITOR-vim}" "${release_notes_file}"
 
 release_notes="$(cat "${release_notes_file}")"
-
-
-echo "Pruning target directories…"
-find . -name target -prune -exec rm -r {} \;
-
-echo "Building and publishing…"
-sbt \
-    "set previousVersion := Some(\"${previous_release_version}\")" \
-    "set version in Global := \"${version}\"" \
-    +test \
-    "set failOnBinaryIncompatibility := ${fail_on_binary_incompatibility}" \
-    +mimaReportBinaryIssues \
-    +publishSigned \
-    ;
-
-dirty=$(git status --porcelain)
-[ -z "${dirty}" ] || error "building and releasing made the repository dirty! Please fix this tragedy and then tag the release and update the readme." "${dirty}"
 
 
 

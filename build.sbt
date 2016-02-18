@@ -1,3 +1,4 @@
+import com.typesafe.tools.mima.plugin.MimaKeys
 import sbt.impl.GroupArtifactID
 
 crossScalaVersions in Global := Seq("2.10.6", "2.11.7")
@@ -95,8 +96,8 @@ val sharedSettings = mimaDefaultSettings ++ Seq[Def.Setting[_]](
       "com.typesafe.akka" %% "akka-actor" -> url(s"http://doc.akka.io/api/akka/${akkaVersion.value}/")
     ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
   },
-  com.typesafe.tools.mima.plugin.MimaKeys.previousArtifact := previousVersion.value.map(v => CrossVersion(scalaVersion.value, scalaBinaryVersion.value)(projectID.value.copy(revision = v, explicitArtifacts = Nil))),
-  com.typesafe.tools.mima.plugin.MimaKeys.failOnProblem := failOnBinaryIncompatibility.value,
+  MimaKeys.previousArtifacts := previousVersion.value.map(v => projectID.value.copy(revision = v, explicitArtifacts = Nil)).toSet,
+  MimaKeys.failOnProblem := failOnBinaryIncompatibility.value,
   publishTo := mavenRepository(isSnapshot.value)
 )
 
