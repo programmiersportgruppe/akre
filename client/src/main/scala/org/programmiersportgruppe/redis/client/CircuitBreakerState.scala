@@ -36,7 +36,7 @@ object CircuitBreakerState {
     * @param consecutiveFailures the number of failures we have seen since we last saw a successful completion
     */
   final class Closed private(settings: CircuitBreakerSettings, consecutiveFailures: Int) extends CircuitBreakerState {
-    def this(options: CircuitBreakerSettings) = this(options, 0)
+    def this(settings: CircuitBreakerSettings) = this(settings, 0)
 
     override def attemptOperation = true -> this
 

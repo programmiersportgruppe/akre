@@ -26,7 +26,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
     require(address.isDefined)
     withRedisServer(address.get) { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(5.seconds)
 
         val retrieved = for {
@@ -43,7 +43,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "delete stored keys" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(5.seconds)
 
         val deleted = for {
@@ -60,7 +60,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "not hang forever on construction when unable to reach the server" in {
     withActorSystem { actorSystem =>
       implicit val client = within(100.milliseconds) {
-        new RedisClient(actorSystem, new InetSocketAddress("localhost", 1), 1.second, 3.seconds, 1)
+        new RedisClient(ConnectionPoolSettings(new InetSocketAddress("localhost", 1), 1), 3.seconds, actorSystem)
       }
       intercept[TimeoutException] {
         client.waitUntilConnected(1.second)
@@ -79,15 +79,15 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "recover from the server going down abruptly" in {
     withActorSystem { actorSystem =>
 
-      val (serverAddress, originalClient) = withRedisServer { address =>
-        implicit val client = new RedisClient(actorSystem, address, 1.second, 3.seconds, 1)
+      val (serverAddress, originalClient) = withRedisServer { serverAddress =>
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(1.second)
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(1)).execute)
         }
 
-        (address, client)
+        (serverAddress, client)
       }
       implicit val client = originalClient
 
@@ -111,7 +111,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       implicit var client: RedisClient = null
 
       withRedisServer { serverAddress =>
-        client = new RedisClient(actorSystem, serverAddress, 50.milliseconds, 3.seconds, 1)
+        client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(1.second)
 
         await(SHUTDOWN().executeConnectionClose)
@@ -131,7 +131,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "send connection setup commands once per client" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 3, Seq(APPEND(Key("song"), ByteString("La"))))
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 3), 3.seconds, actorSystem, Seq(APPEND(Key("song"), ByteString("La"))))
         client.waitUntilConnected(5.seconds)
 
         eventually {
@@ -147,7 +147,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "return the substring of the value stored at key" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(5.seconds)
 
         val getRange = for {
@@ -163,7 +163,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "return the substring of the value stored at key for negative range" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(5.seconds)
 
         val getRange = for {
@@ -179,7 +179,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should "return the substring of the value stored at key for large ranges" in {
     withRedisServer { serverAddress =>
       withActorSystem { actorSystem =>
-        implicit val client = new RedisClient(actorSystem, serverAddress, 3.seconds, 3.seconds, 1)
+        implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
         client.waitUntilConnected(5.seconds)
 
         val getRange = for {
