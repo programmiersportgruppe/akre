@@ -5,9 +5,10 @@ import java.net.InetSocketAddress
 import akka.actor.Props
 import akka.util.ByteString
 
-import org.programmiersportgruppe.redis.{RInteger, RBulkString, RArray, RValue}
 import org.programmiersportgruppe.redis.client.RedisSubscriptionActor.PubSubMessage
 import org.programmiersportgruppe.redis.commands.SUBSCRIBE
+import org.programmiersportgruppe.redis.{ RArray, RBulkString, RInteger, RValue }
+
 
 object RedisSubscriptionActor {
 
@@ -24,6 +25,13 @@ object RedisSubscriptionActor {
 
 }
 
+/** Subscribes to one or more channels and calls an event handler for received message.
+  *
+  * @param serverAddress               address of the server to connect to
+  * @param messageToParentOnSubscribed optional message to send to parent actor when connected
+  * @param channels                    list of channels to subscribe to
+  * @param onMessage                   callback invoked with each message received
+  */
 class RedisSubscriptionActor(serverAddress: InetSocketAddress, messageToParentOnSubscribed: Option[Any], channels: Seq[ByteString], onMessage: PubSubMessage => Unit)
   extends RedisConnectionActor(serverAddress, channels match { case head +: tail => Seq(SUBSCRIBE(head, tail: _*)) }, None) {
 
