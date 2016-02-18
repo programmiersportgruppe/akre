@@ -66,7 +66,7 @@ case class EXISTS(key: Key) extends RecognisedCommand(key) with BooleanIntegerEx
 case class EXPIRE(key: Key, seconds: Long) extends RecognisedCommand(key, seconds) with BooleanIntegerExpected
 
 // Pub/Sub
-case class PUBLISH(channel: ByteString, message: ByteString) extends RecognisedCommand(StringArgument(channel), StringArgument(message)) with SingleReplyExpected
+case class PUBLISH(channel: ByteString, message: ByteString) extends RecognisedCommand(StringArgument(channel), StringArgument(message)) with IntegerExpected
 case class SUBSCRIBE(channel: ByteString, additionalChannels: ByteString*) extends RecognisedCommand((channel +: additionalChannels).map(StringArgument(_)): _*)
 
 // Strings
