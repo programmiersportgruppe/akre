@@ -18,15 +18,10 @@ publishMavenStyle := true
 
 publishArtifact := false
 
-def mavenRepository(isSnapshot: Boolean): Some[MavenRepository] = {
-  def nexus = "https://oss.sonatype.org/"
-  if (isSnapshot)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases" at nexus + "service/local/staging/deploy/maven2")
+publishTo in Global := Some {
+  if (isSnapshot.value) Opts.resolver.sonatypeStaging
+  else                  Opts.resolver.sonatypeReleases
 }
-
-publishTo := mavenRepository(isSnapshot.value)
 
 
 lazy val akkaVersion = Def.setting("2.3.14")
@@ -97,8 +92,7 @@ val sharedSettings = mimaDefaultSettings ++ Seq[Def.Setting[_]](
     ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
   },
   MimaKeys.previousArtifacts := previousVersion.value.map(v => projectID.value.copy(revision = v, explicitArtifacts = Nil)).toSet,
-  MimaKeys.failOnProblem := failOnBinaryIncompatibility.value,
-  publishTo := mavenRepository(isSnapshot.value)
+  MimaKeys.failOnProblem := failOnBinaryIncompatibility.value
 )
 
 lazy val core = project
