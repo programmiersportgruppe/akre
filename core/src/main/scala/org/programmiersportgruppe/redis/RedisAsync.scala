@@ -49,7 +49,7 @@ trait RedisAsync {
     * @param extractValue a partial function that extracts a value from a success reply
     * @tparam A the type of value returned
     */
-  private def executeAndExtract[A](command: Command)(extractValue: PartialFunction[RSuccessValue, A]): Future[A] =
+  private[this] def executeAndExtract[A](command: Command)(extractValue: PartialFunction[RSuccessValue, A]): Future[A] =
     execute(command).map { successReply =>
       extractValue.applyOrElse(successReply, (r: RSuccessValue) => throw new UnexpectedReplyException(command, r))
     }
