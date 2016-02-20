@@ -8,16 +8,41 @@ import akka.io.{IO, Tcp}
 import akka.io.Tcp.ConnectionClosed
 
 import org.programmiersportgruppe.redis._
+import org.programmiersportgruppe.redis.client.RedisConnectionActor._
 import org.programmiersportgruppe.redis.protocol._
 
 
 object RedisConnectionActor {
-  case class NotReadyException(command: Command) extends RuntimeException("Received command before connected: " + command)
-  case class UnableToConnectException(connectMessage: Tcp.Connect) extends RuntimeException("Unable to connect to Redis server with " + connectMessage)
+
+  case class NotReadyException(command: Command)
+    extends RuntimeException("Received command before connected: " + command)
+
+  case class UnableToConnectException(connectMessage: Tcp.Connect)
+    extends RuntimeException("Unable to connect to Redis server with " + connectMessage)
+
 }
 
-abstract class RedisConnectionActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any]) extends Actor {
-  import org.programmiersportgruppe.redis.client.RedisConnectionActor._
+/** A TCP connection to a Redis server
+  *
+  * When the actor is instantiated, it establishes a connection to a Redis server.
+  * Once it has established the connection, it sends the `connectionSetupCommands` to the server,
+  * and the optional `messageToParentOnConnected` to its parent.
+  * If the actor fails to connect to the server, an [[RedisConnectionActor.UnableToConnectException]] is thrown.
+  *
+  * It will then send any commands it receives to the server,
+  * and call `onReplyParsed` for each reply parsed from the server.
+  * If a command is received before the connection to the server has been established,
+  * a [[RedisConnectionActor.NotReadyException]] is thrown.
+  *
+  * @param serverAddress address to connect to
+  * @param connectionSetupCommands commands to send immediately after establishing the connection
+  * @param messageToParentOnConnected message to send to parent actor immediately after sending connection setup commands
+  */
+abstract class RedisConnectionActor(
+    serverAddress: InetSocketAddress,
+    connectionSetupCommands: Seq[Command],
+    messageToParentOnConnected: Option[Any])
+  extends Actor {
 
   val log = Logging(context.system, this)
 
@@ -29,10 +54,21 @@ abstract class RedisConnectionActor(serverAddress: InetSocketAddress, connection
   log.debug("Connecting to Redis server at {}", remote)
   IO(Tcp)(context.system) ! Tcp.Connect(remote)
 
+  /** Callback for each reply parsed from the TCP stream from the server
+    */
   protected def onReplyParsed(reply: RValue): Unit
 
+  /** Callback invoked when the TCP connection to the server is closed
+    *
+    * @param closed connection closed message from the TCP socket
+    */
   protected def onConnectionClosed(closed: ConnectionClosed): Unit = {}
 
+  /** Callback invoked when a command is sent to the server
+    *
+    * @param command command that was sent to the server
+    * @param listener reference to the actor that sent this command
+    */
   protected def onExecuteCommand(command: Command, listener: ActorRef): Unit = {}
 
 
@@ -55,8 +91,8 @@ abstract class RedisConnectionActor(serverAddress: InetSocketAddress, connection
       connection ! Tcp.Register(self)
 
       def executeCommand(command: Command, listener: ActorRef): Unit = {
-        onExecuteCommand(command, listener)
         connection ! Tcp.Write(CommandSerializer.serialize(command))
+        onExecuteCommand(command, listener)
       }
 
       for (command <- connectionSetupCommands)
@@ -78,8 +114,6 @@ abstract class RedisConnectionActor(serverAddress: InetSocketAddress, connection
             log.debug("Decoded reply {}", reply)
             onReplyParsed(reply)
           }
-        case "close" =>
-          connection ! Tcp.Close
         case closed: Tcp.ConnectionClosed if sender() == connection =>
           onConnectionClosed(closed)
       }
