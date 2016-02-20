@@ -10,11 +10,6 @@ import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.commands.CLIENT_SETNAME
 
 
-/**
- * @define timeoutExplanation
- *         If the connection pool fails to deliver a reply within the `requestTimeout`,
- *         a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
- */
 class RedisClient(
   val connectionPoolSettings: ConnectionPoolSettings,
   val requestTimeout: Timeout,
