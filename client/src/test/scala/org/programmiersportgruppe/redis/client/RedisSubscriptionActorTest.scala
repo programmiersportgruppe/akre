@@ -8,6 +8,7 @@ import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.client.RedisSubscriptionActor.PubSubMessage
 import org.programmiersportgruppe.redis.commands.PUBLISH
 import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
+import org.scalatest.time.{ Millis, Span }
 
 
 class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
@@ -43,6 +44,7 @@ class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
         normal ! PUBLISH("chan B", "b message")
         normal ! PUBLISH("chan C", "c message")
 
+        implicit def patienceConfig = super.patienceConfig.copy(Span(300, Millis))
         eventually {
           assert(messages == Seq(PubSubMessage("chan A", "a message"), PubSubMessage("chan C", "c message")))
         }
