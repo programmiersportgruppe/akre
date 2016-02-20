@@ -6,7 +6,8 @@ import org.programmiersportgruppe.redis._
 
 
 class PushParserReplyReconstructor extends ReplyReconstructor {
-  var parser: Parser[RValue] = RValueParser
+
+  private[this] var parser: Parser[RValue] = RValueParser
 
   override def process(data: ByteString)(handleReply: RValue => _) = {
     parser.parse(data) match {

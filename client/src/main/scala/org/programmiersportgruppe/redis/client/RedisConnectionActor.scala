@@ -21,7 +21,7 @@ abstract class RedisConnectionActor(serverAddress: InetSocketAddress, connection
 
   val log = Logging(context.system, this)
 
-  var replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
+  val replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
   val remote =
     if (serverAddress.isUnresolved) new InetSocketAddress(serverAddress.getHostName, serverAddress.getPort)

@@ -5,7 +5,7 @@ package org.programmiersportgruppe.redis.client
   */
 class EventDrivenCircuitBreaker(settings: CircuitBreakerSettings) {
 
-  private var state: CircuitBreakerState = new CircuitBreakerState.Closed(settings)
+  private[this] var state: CircuitBreakerState = new CircuitBreakerState.Closed(settings)
 
   def transitionTo(newState: CircuitBreakerState): Unit =
     if (state != newState) {

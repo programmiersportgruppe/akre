@@ -27,9 +27,9 @@ class RedisClient(
   import akka.pattern.ask
 
   override implicit val executor = actorRefFactory.dispatcher
-  implicit private val timeout = requestTimeout
+  implicit private[this] final def timeout = requestTimeout
 
-  private val poolActor =
+  private[this] val poolActor =
     connectionPoolSettings.createResilientPool(actorRefFactory, "redis-client-connection-pool") { serverAddress =>
       RedisCommandReplyActor.props(serverAddress, connectionSetupCommands, Some(ResilientPoolActor.ChildReady))
     }

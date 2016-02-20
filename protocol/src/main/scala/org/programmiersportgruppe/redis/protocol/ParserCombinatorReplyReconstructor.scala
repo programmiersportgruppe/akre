@@ -7,7 +7,7 @@ import org.programmiersportgruppe.redis._
 
 class ParserCombinatorReplyReconstructor extends ReplyReconstructor with UnifiedProtocolParsers {
 
-  private var buffer: ByteString = ByteString.empty
+  private[this] var buffer: ByteString = ByteString.empty
 
   def extractNext: Option[RValue] = {
     reply(new ByteStringReader(buffer, 0)) match {
