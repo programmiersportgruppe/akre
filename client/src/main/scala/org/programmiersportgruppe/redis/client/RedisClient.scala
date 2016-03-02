@@ -14,7 +14,8 @@ class RedisClient(
   val connectionPoolSettings: ConnectionPoolSettings,
   val requestTimeout: Timeout,
   actorRefFactory: ActorRefFactory,
-  connectionSetupCommands: Seq[Command] = Nil
+  connectionSetupCommands: Seq[Command] = Nil,
+  poolActorName: String = "redis-client-connection-pool"
 ) extends RedisAsync {
   def this(connectionPoolSettings: ConnectionPoolSettings, requestTimeout: Timeout, actorRefFactory: ActorRefFactory, initialClientName: String) =
     this(connectionPoolSettings, requestTimeout, actorRefFactory, Seq(CLIENT_SETNAME(initialClientName)))
@@ -25,7 +26,7 @@ class RedisClient(
   implicit private[this] final def timeout = requestTimeout
 
   private[this] val poolActor =
-    connectionPoolSettings.createResilientPool(actorRefFactory, "redis-client-connection-pool") { serverAddress =>
+    connectionPoolSettings.createResilientPool(actorRefFactory, poolActorName) { serverAddress =>
       RedisCommandReplyActor.props(serverAddress, connectionSetupCommands, Some(ResilientPoolActor.ChildReady))
     }
 
