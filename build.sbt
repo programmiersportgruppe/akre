@@ -19,8 +19,8 @@ publishMavenStyle := true
 publishArtifact := false
 
 publishTo in Global := Some {
-  if (isSnapshot.value) Opts.resolver.sonatypeStaging
-  else                  Opts.resolver.sonatypeReleases
+  if (isSnapshot.value) Opts.resolver.sonatypeSnapshots
+  else                  Opts.resolver.sonatypeStaging
 }
 
 
