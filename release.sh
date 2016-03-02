@@ -101,7 +101,7 @@ minor="${previous_release_version:$((${#major}+1)):$((${#previous_release_versio
 if [ "${change}" = explicit ]; then
     error "explicit version releases aren't yet implemented; you might want to edit the release script to have it do the right thing"
 else
-    let "${change}++"
+    let "${change}+=1"
     version="${major}.${minor}.${patch}"
 fi
 
