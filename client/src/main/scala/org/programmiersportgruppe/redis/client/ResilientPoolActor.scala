@@ -2,7 +2,7 @@ package org.programmiersportgruppe.redis.client
 
 import java.util.concurrent.TimeoutException
 
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
