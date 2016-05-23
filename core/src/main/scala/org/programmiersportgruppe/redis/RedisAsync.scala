@@ -1,6 +1,6 @@
 package org.programmiersportgruppe.redis
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 import akka.util.ByteString
 
@@ -14,7 +14,6 @@ import akka.util.ByteString
   * a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
   */
 trait RedisAsync {
-  implicit val executor: ExecutionContext
 
   /**
    * Executes a command, returning a future reply from the server.
@@ -52,7 +51,7 @@ trait RedisAsync {
   private[this] def executeAndExtract[A](command: Command)(extractValue: PartialFunction[RSuccessValue, A]): Future[A] =
     execute(command).map { successReply =>
       extractValue.applyOrElse(successReply, (r: RSuccessValue) => throw new UnexpectedReplyException(command, r))
-    }
+    }(ImmediateExecutionOnCallingThread)
 
   /**
    * Executes a command and extracts an optional [[akka.util.ByteString]] from the expected [[RBulkString]] reply.

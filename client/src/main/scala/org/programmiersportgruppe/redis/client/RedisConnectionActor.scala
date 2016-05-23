@@ -44,11 +44,11 @@ abstract class RedisConnectionActor(
     messageToParentOnConnected: Option[Any])
   extends Actor {
 
-  val log = Logging(context.system, this)
+  protected[this] val log = Logging(context.system, this)
 
-  val replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
+  private[this] val replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
-  val remote =
+  private[this] val remote =
     if (serverAddress.isUnresolved) new InetSocketAddress(serverAddress.getHostName, serverAddress.getPort)
     else serverAddress
   log.debug("Connecting to Redis server at {}", remote)
@@ -72,7 +72,7 @@ abstract class RedisConnectionActor(
   protected def onExecuteCommand(command: Command, listener: ActorRef): Unit = {}
 
 
-  def receive = {
+  final def receive = {
 
     case Tcp.CommandFailed(connect: Tcp.Connect) =>
       // TODO: send Failure messages to waiting actors
@@ -97,18 +97,15 @@ abstract class RedisConnectionActor(
 
       for (command <- connectionSetupCommands)
         executeCommand(command, Actor.noSender)
-      messageToParentOnConnected.map(context.parent ! _)
+      messageToParentOnConnected.foreach(context.parent ! _)
       log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
       context become {
         case command: Command =>
           log.debug("Received command {}", command)
           executeCommand(command, sender())
-        case Tcp.CommandFailed(w: Tcp.Write) =>
-        // O/S buffer was full
-        //                    listener ! "write failed"
         case Tcp.Received(data) =>
           if (log.isDebugEnabled)
-            log.debug("Received {} bytes of data: [{}]", data.length, data.utf8String)
+            log.debug(s"Received ${data.length} bytes of data: [${data.utf8String}]")
 
           replyReconstructor.process(data) { reply: RValue =>
             log.debug("Decoded reply {}", reply)

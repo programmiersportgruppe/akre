@@ -22,7 +22,6 @@ class RedisClient(
 
   import akka.pattern.ask
 
-  override implicit val executor = actorRefFactory.dispatcher
   implicit private[this] final def timeout = requestTimeout
 
   private[this] val poolActor =
@@ -40,15 +39,15 @@ class RedisClient(
     case (`command`, e: RError)        => throw new ErrorReplyException(command, e)
   }, {
     case e: Throwable => new RequestExecutionException(command, e)
-  })
+  })(ImmediateExecutionOnCallingThread)
 
   override def executeConnectionClose(command: Command): Future[Unit] = (poolActor ? command).transform({
-    case ()    => ()
+    case ()                            => ()
     case (`command`, r: RSuccessValue) => throw new UnexpectedReplyException(command, r)
     case (`command`, e: RError)        => throw new ErrorReplyException(command, e)
   }, {
     case e: Throwable => new RequestExecutionException(command, e)
-  })
+  })(ImmediateExecutionOnCallingThread)
 
   /**
    * Stops the connection pool used by the client,
@@ -58,7 +57,8 @@ class RedisClient(
    * a failed future containing an [[akka.pattern.AskTimeoutException]] will be returned.
    */
   def shutdown(): Future[Unit] = {
-    akka.pattern.gracefulStop(poolActor, 30.seconds).map(_ => ())
+    akka.pattern.gracefulStop(poolActor, 30.seconds)
+      .map(_ => ())(ImmediateExecutionOnCallingThread)
   }
 
 //  def executeBoolean(command: RedisCommand[IntegerReply]): Future[Boolean] = executeAny(command) map { case IntegerReply(0) => false; case IntegerReply(1) => true }

@@ -86,7 +86,7 @@ object ResilientPoolActor {
   * @param routingLogic                   the logic to use in routing messages to the children
   * @param creationCircuitBreakerSettings settings for the child creation circuit breaker
   */
-class ResilientPoolActor(
+final class ResilientPoolActor(
     size: Int,
     childProps: Props,
     creationCircuitBreakerSettings: CircuitBreakerSettings,
@@ -95,11 +95,11 @@ class ResilientPoolActor(
 
   import context.dispatcher
 
-  val log = Logging(context.system, this)
-  val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
-  var router: Router = Router(routingLogic)
+  private[this] val log = Logging(context.system, this)
+  private[this] val pendingWorkers = collection.mutable.Queue[(ActorRef, Deadline)]()
+  private[this] var router: Router = Router(routingLogic)
 
-  val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerSettings) {
+  private[this] val creationCircuitBreaker = new EventDrivenCircuitBreaker(creationCircuitBreakerSettings) {
 
     var scheduledRecruitment: Option[Cancellable] = None
 
@@ -135,7 +135,7 @@ class ResilientPoolActor(
     super.aroundReceive(receive, msg)
   }
 
-  def fireTardyWorkers(): Unit = {
+  private def fireTardyWorkers(): Unit = {
     while (pendingWorkers.headOption.exists(_._2.isOverdue())) {
       val (worker, _) = pendingWorkers.dequeue()
       log.warning("Stopping worker {}, which took too long to report ready.", worker)
@@ -144,7 +144,7 @@ class ResilientPoolActor(
     }
   }
 
-  def recruitWorkers(): Unit = {
+  private def recruitWorkers(): Unit = {
     fireTardyWorkers()
 
     for (_ <- 0 until (size - (activeWorkerCount + pendingWorkers.size)))
@@ -156,9 +156,9 @@ class ResilientPoolActor(
       }
   }
 
-  def activeWorkerCount: Int = router.routees.size
+  private def activeWorkerCount: Int = router.routees.size
 
-  def deactivateWorker(worker: ActorRef): Unit = {
+  private def deactivateWorker(worker: ActorRef): Unit = {
     val priorStatus =
       if (pendingWorkers.dequeueFirst(_._1 == worker).nonEmpty) {
         creationCircuitBreaker.reportFailure()
@@ -182,24 +182,28 @@ class ResilientPoolActor(
       Stop
   }
 
-  def receive = {
-    case RecruitWorkers                                                        => recruitWorkers()
-    case ChildReady if pendingWorkers.dequeueFirst(_._1 == sender()).isDefined =>
-      creationCircuitBreaker.reportSuccess()
-      router = router.addRoutee(sender())
-      log.info(s"Worker {} activated (now {} of {})", sender(), activeWorkerCount, size)
-    case Terminated(worker)                                                    => deactivateWorker(worker)
-    case GetRoutees                                                            => sender ! Routees(router.routees)
-    case message if router.routees.contains(ActorRefRoutee(sender()))          => log.error("Unexpected message from active worker {}: {}", sender(), message)
-    case message if pendingWorkers.exists(_._1 == sender())                    => log.error("Unexpected message from pending worker {}: {}", sender(), message)
-    case message                                                               =>
-      if (sender() == ActorRef.noSender) {
-        log.error("WTF? incoming senderless message: {}", message)
-      } else if (router.routees.isEmpty) {
+  override def receive = {
+    case RecruitWorkers     => recruitWorkers()
+    case ChildReady         =>
+      if (pendingWorkers.dequeueFirst(_._1 == sender()).isDefined) {
+        creationCircuitBreaker.reportSuccess()
+        router = router.addRoutee(sender())
+        log.info(s"Worker {} activated (now {} of {})", sender(), activeWorkerCount, size)
+      } else {
+        log.error(s"Unexpectedly received ChildReady message from ${sender()}. Actually waiting for: $pendingWorkers")
+      }
+    case GetRoutees         => sender ! Routees(router.routees)
+    case Terminated(worker) => deactivateWorker(worker)
+    case message            =>
+      if (pendingWorkers.exists(_._1 == sender()))
+        log.error("Unexpected message from pending worker {}: {}", sender(), message)
+      if (router.routees.isEmpty) {
         log.warning("Can't deliver message {} for sender {} due to lack of workers", message, sender())
         sender ! akka.actor.Status.Failure(new EmptyPoolException(message))
         recruitWorkers()
-      } else {
+      } else if (router.routees.contains(ActorRefRoutee(sender())))
+        log.error("Unexpected message from active worker {}: {}", sender(), message)
+      else {
         log.debug("Routing message {} for sender {}", message, sender())
         router.route(message, sender())
       }

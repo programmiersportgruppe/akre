@@ -21,21 +21,21 @@ object RedisCommandReplyActor {
 
 }
 
-class RedisCommandReplyActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any])
+final class RedisCommandReplyActor(serverAddress: InetSocketAddress, connectionSetupCommands: Seq[Command], messageToParentOnConnected: Option[Any])
   extends RedisConnectionActor(serverAddress, connectionSetupCommands, messageToParentOnConnected) {
 
-  val pendingCommands = mutable.Queue[(ActorRef, Command)]()
+  private[this] val pendingCommands = mutable.Queue[(ActorRef, Command)]()
 
   override protected def onReplyParsed(reply: RValue): Unit = {
     assert(pendingCommands.nonEmpty, s"Received a completely unexpected reply: $reply")
     pendingCommands.dequeue() match {
-      case (Actor.noSender, _) => // nothing to do
+      case (Actor.noSender, _)       => // this was a connection setup command, nothing to do
       case (originalSender, command) => originalSender ! (command -> reply)
     }
   }
 
   override protected def onExecuteCommand(command: Command, listener: ActorRef): Unit =
-    pendingCommands.enqueue(listener -> command)
+    pendingCommands += listener -> command
 
   override protected def onConnectionClosed(closed: ConnectionClosed): Unit =
     if (closed.isErrorClosed || pendingCommands.exists(!_._2.isInstanceOf[ConnectionCloseExpected])) {
