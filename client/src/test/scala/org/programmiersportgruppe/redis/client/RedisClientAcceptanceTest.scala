@@ -81,7 +81,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
       val (serverAddress, originalClient) = withRedisServer { serverAddress =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        await(client.completeWhenConnected(timeout = 1.second))
+        await(client.completeWhenConnected())
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(1)).execute)
@@ -96,7 +96,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       }
 
       withRedisServer(serverAddress) { _ =>
-        await(client.completeWhenConnected(timeout = 1.second))
+        await(client.completeWhenConnected())
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
