@@ -26,7 +26,7 @@ object ResilientPoolActor {
   ): Props =
     Props(classOf[ResilientPoolActor], size, childProps, creationCircuitBreakerSettings, routingLogic)
 
-  def completeOnActiveChildren(scheduler: Scheduler, pool: ActorRef, timeout: FiniteDuration, minConnections: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis): Future[Unit] = {
+  def completeOnActiveChildren(scheduler: Scheduler, pool: ActorRef, timeout: FiniteDuration, minimumToWaitFor: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis): Future[Unit] = {
     val complete = Promise[Unit]()
     val deadline = timeout.fromNow
 
@@ -34,12 +34,12 @@ object ResilientPoolActor {
       val queryTimeout = (deadline.timeLeft max Duration.Zero) + queryTolerance
       pool.ask(GetRoutees)(queryTimeout).onComplete {
         case Success(routees) =>
-          if (routees.asInstanceOf[Routees].routees.size >= minConnections)
+          if (routees.asInstanceOf[Routees].routees.size >= minimumToWaitFor)
             complete.success(())
           else {
             val timeLeft = deadline.timeLeft
             if (timeLeft < Duration.Zero)
-              complete.failure(new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections"))
+              complete.failure(new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minimumToWaitFor children"))
             else scheduler.scheduleOnce(pollingInterval min timeLeft) {
               checkCurrentChildCount()
             }(ImmediateExecutionOnCallingThread)
