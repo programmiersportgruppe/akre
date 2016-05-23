@@ -29,7 +29,7 @@ lazy val akkaVersion = Def.setting("2.3.15")
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
 
-val sharedSettings = mimaDefaultSettings ++ Seq[Def.Setting[_]](
+val sharedSettings = Seq[Def.Setting[_]](
   name := "akre-" + name.value,
   homepage := Some(url("https://github.com/programmiersportgruppe/akre")),
   scmInfo := Some(ScmInfo(
