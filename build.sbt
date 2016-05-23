@@ -1,7 +1,7 @@
 import com.typesafe.tools.mima.plugin.MimaKeys
 import sbt.impl.GroupArtifactID
 
-crossScalaVersions in Global := Seq("2.10.6", "2.11.7")
+crossScalaVersions in Global := Seq("2.10.6", "2.11.8")
 
 scalaVersion in Global := crossScalaVersions.value.head
 
@@ -24,7 +24,7 @@ publishTo in Global := Some {
 }
 
 
-lazy val akkaVersion = Def.setting("2.3.14")
+lazy val akkaVersion = Def.setting("2.3.15")
 
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
