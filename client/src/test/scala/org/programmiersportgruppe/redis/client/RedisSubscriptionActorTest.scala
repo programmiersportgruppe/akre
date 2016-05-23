@@ -46,7 +46,12 @@ class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
 
         implicit def patienceConfig = super.patienceConfig.copy(Span(300, Millis))
         eventually {
-          assert(messages == Seq(PubSubMessage("chan A", "a message"), PubSubMessage("chan C", "c message")))
+          val formattedMessages =
+            messages
+              .map { case PubSubMessage(channel, message) => s"[${channel.utf8String}]: ${message.utf8String}" }
+              .mkString("; ")
+
+          assert(formattedMessages == "[chan A]: a message; [chan C]: c message")
         }
       }
     }
