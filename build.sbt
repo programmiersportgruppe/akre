@@ -44,6 +44,7 @@ val sharedSettings = mimaDefaultSettings ++ Seq[Def.Setting[_]](
     "-deprecation",
     "-encoding", "UTF-8",
     "-feature",
+    "-target:jvm-1.6",
     "-unchecked",
     "-Xlint",
     "-Xfatal-warnings",
