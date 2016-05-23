@@ -2,10 +2,8 @@ package org.programmiersportgruppe.redis.client
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
-import akka.actor.ActorRefFactory
+import akka.actor.{ActorRefFactory, ActorSystem, Scheduler}
 import akka.util.Timeout
-
 import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.commands.CLIENT_SETNAME
 
@@ -29,9 +27,12 @@ class RedisClient(
       RedisCommandReplyActor.props(serverAddress, connectionSetupCommands, Some(ResilientPoolActor.ChildReady))
     }
 
-  def waitUntilConnected(timeout: FiniteDuration, minConnections: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis): Unit = {
+  def completeWhenConnected(timeout: FiniteDuration = 5.seconds, minConnections: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis)(implicit actorSystem: ActorSystem): Future[Unit] =
+    completeWhenConnected(actorSystem.scheduler, timeout, minConnections, pollingInterval, queryTolerance)
+
+  def completeWhenConnected(scheduler: Scheduler, timeout: FiniteDuration, minConnections: Int, pollingInterval: FiniteDuration, queryTolerance: FiniteDuration): Future[Unit] = {
     require(minConnections <= connectionPoolSettings.size, s"No point waiting for $minConnections connections when pool only has size ${connectionPoolSettings.size}")
-    ResilientPoolActor.waitForActiveChildren(poolActor, timeout, minConnections, pollingInterval, queryTolerance)
+    ResilientPoolActor.completeOnActiveChildren(scheduler, poolActor, timeout, minConnections, pollingInterval, queryTolerance)
   }
 
   override def execute(command: Command): Future[RSuccessValue] = (poolActor ? command).transform({

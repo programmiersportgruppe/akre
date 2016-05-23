@@ -1,9 +1,9 @@
 package org.programmiersportgruppe.redis.client
 
 import java.util.concurrent.TimeoutException
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
+import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.dispatch._
@@ -11,8 +11,10 @@ import akka.event.Logging
 import akka.pattern.ask
 import akka.routing._
 import com.typesafe.config.Config
-
+import org.programmiersportgruppe.redis.ImmediateExecutionOnCallingThread
 import org.programmiersportgruppe.redis.client.ResilientPoolActor._
+
+import scala.util.{Failure, Success}
 
 object ResilientPoolActor {
 
@@ -24,18 +26,31 @@ object ResilientPoolActor {
   ): Props =
     Props(classOf[ResilientPoolActor], size, childProps, creationCircuitBreakerSettings, routingLogic)
 
-  def waitForActiveChildren(pool: ActorRef, timeout: FiniteDuration, minConnections: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis): Unit = {
+  def completeOnActiveChildren(scheduler: Scheduler, pool: ActorRef, timeout: FiniteDuration, minConnections: Int = 1, pollingInterval: FiniteDuration = 10.millis, queryTolerance: FiniteDuration = 10.millis): Future[Unit] = {
+    val complete = Promise[Unit]()
     val deadline = timeout.fromNow
-    while ( {
+
+    def checkCurrentChildCount(): Unit = {
       val queryTimeout = (deadline.timeLeft max Duration.Zero) + queryTolerance
-      val Routees(routees) = Await.result(pool.ask(GetRoutees)(queryTimeout), queryTimeout)
-      routees.length < minConnections
-    }) {
-      val timeLeft = deadline.timeLeft
-      if (timeLeft < Duration.Zero)
-        throw new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections")
-      Thread.sleep((pollingInterval min timeLeft).toMillis)
+      pool.ask(GetRoutees)(queryTimeout).onComplete {
+        case Success(routees) =>
+          if (routees.asInstanceOf[Routees].routees.size >= minConnections)
+            complete.success(())
+          else {
+            val timeLeft = deadline.timeLeft
+            if (timeLeft < Duration.Zero)
+              complete.failure(new TimeoutException(s"Exceeded $timeout timeout while waiting for at least $minConnections connections"))
+            else scheduler.scheduleOnce(pollingInterval min timeLeft) {
+              checkCurrentChildCount()
+            }(ImmediateExecutionOnCallingThread)
+          }
+        case Failure(e) =>
+          complete.failure(e)
+      }(ImmediateExecutionOnCallingThread)
     }
+    checkCurrentChildCount()
+
+    complete.future
   }
 
   /** The message should be sent by the child actors to their parent (the pool)

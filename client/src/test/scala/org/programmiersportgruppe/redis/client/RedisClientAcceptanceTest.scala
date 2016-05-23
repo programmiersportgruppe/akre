@@ -25,9 +25,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
   it should s"return stored keys when connecting $description" in {
     require(address.isDefined)
     withRedisServer(address.get) { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         val retrieved = for {
           s <- SET(Key("A key"), ByteString("A value")).execute
@@ -42,9 +42,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "delete stored keys" in {
     withRedisServer { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         val deleted = for {
           s <- SET(Key("A key"), ByteString("A value")).execute
@@ -58,12 +58,12 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
 
   it should "not hang forever on construction when unable to reach the server" in {
-    withActorSystem { actorSystem =>
+    withActorSystem { implicit actorSystem =>
       implicit val client = within(100.milliseconds) {
         new RedisClient(ConnectionPoolSettings(new InetSocketAddress("localhost", 1), 1), 3.seconds, actorSystem)
       }
       intercept[TimeoutException] {
-        client.waitUntilConnected(1.second)
+        await(client.completeWhenConnected(timeout = 1.second))
       }
 
       val setCommand = SET(Key("A key"), ByteString("A value"))
@@ -77,11 +77,11 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
 
   it should "recover from the server going down abruptly" in {
-    withActorSystem { actorSystem =>
+    withActorSystem { implicit actorSystem =>
 
       val (serverAddress, originalClient) = withRedisServer { serverAddress =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(1.second)
+        await(client.completeWhenConnected(timeout = 1.second))
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(1)).execute)
@@ -96,7 +96,7 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
       }
 
       withRedisServer(serverAddress) { _ =>
-        client.waitUntilConnected(1.second)
+        await(client.completeWhenConnected(timeout = 1.second))
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
@@ -107,18 +107,18 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
 
   it should "recover from the server going down nicely" in {
-    withActorSystem { actorSystem =>
+    withActorSystem { implicit actorSystem =>
       implicit var client: RedisClient = null
 
       withRedisServer { serverAddress =>
         client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(1.second)
+        await(client.completeWhenConnected(timeout = 1.second))
 
         await(SHUTDOWN().executeConnectionClose)
       }
 
       withRedisServer { serverAddress =>
-        client.waitUntilConnected(1.second)
+        await(client.completeWhenConnected(timeout = 1.second))
 
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
@@ -130,9 +130,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "send connection setup commands once per client" in {
     withRedisServer { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 3), 3.seconds, actorSystem, Seq(APPEND(Key("song"), ByteString("La"))))
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         eventually {
           assertResult(Some("LaLaLa")) {
@@ -146,9 +146,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "return the substring of the value stored at key" in {
     withRedisServer { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         val getRange = for {
           s <- SET(Key("A key"), ByteString("This is a string")).execute
@@ -162,9 +162,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "return the substring of the value stored at key for negative range" in {
     withRedisServer { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         val getRange = for {
           s <- SET(Key("A key"), ByteString("This is a string")).execute
@@ -178,9 +178,9 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
   it should "return the substring of the value stored at key for large ranges" in {
     withRedisServer { serverAddress =>
-      withActorSystem { actorSystem =>
+      withActorSystem { implicit actorSystem =>
         implicit val client = new RedisClient(ConnectionPoolSettings(serverAddress, 1), 3.seconds, actorSystem)
-        client.waitUntilConnected(5.seconds)
+        await(client.completeWhenConnected())
 
         val getRange = for {
           s <- SET(Key("A key"), ByteString("This is a string")).execute
