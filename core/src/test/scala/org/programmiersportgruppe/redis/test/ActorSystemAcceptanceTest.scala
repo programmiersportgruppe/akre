@@ -1,8 +1,8 @@
 package org.programmiersportgruppe.redis.test
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 import java.util.concurrent.atomic.AtomicInteger
-import scala.concurrent.{Await, Awaitable, Future, Promise}
+import scala.concurrent.{ Await, Awaitable, Future, Promise }
 import scala.concurrent.duration._
 import scala.sys.process.ProcessLogger
 
@@ -24,6 +24,7 @@ object ActorSystemAcceptanceTest {
 }
 
 class ActorSystemAcceptanceTest extends Test {
+
   import ActorSystemAcceptanceTest._
 
   implicit val executionContext = scala.concurrent.ExecutionContext.global
@@ -38,37 +39,35 @@ class ActorSystemAcceptanceTest extends Test {
 
   def withRedisServer[A](address: InetSocketAddress)(testCode: InetSocketAddress => A): A = {
 
-    val output = new StringBuilder
+    val log = new StringBuffer("Redis server log:\n")
     val serverReady = Promise[Unit]()
 
     val server = sys.process.Process(Seq("redis-server"
       , "--port", address.getPort.toString
       , "--bind", Option(address.getAddress).fold(address.getHostName)(_.getHostAddress.replaceAll("%.*[a-zA-Z].*", ""))
-      , "--save", ""  // disable saving state to disk
+      , "--save", "" // disable saving state to disk
     )).run(ProcessLogger { line =>
-      while(
-        try {
-          info("Redis server output: " + line.replaceAll("\r?\n?$", ""))
-          false
-        } catch {
-          case e: InterruptedException => true
-        }
-      ) ()
-      output.append(line)
       if (line contains "The server is now ready to accept connections")
         serverReady.success(())
+      log.append(line).append('\n')
     })
-    try {
-      serverReady.tryCompleteWith(Future {
-        val exitStatus = server.exitValue()
-        if (!serverReady.isCompleted)
-          throw new RuntimeException("Server terminated unexpectedly with exit status " + exitStatus + ". Output follows:\n" + output)
-      })
-      await(serverReady.future)
-      testCode(address)
-    } finally {
-      server.destroy()
-      server.exitValue()
+    try
+      try {
+        serverReady.tryCompleteWith(Future {
+          val exitStatus = server.exitValue()
+          if (!serverReady.isCompleted)
+            throw new RuntimeException("Server terminated unexpectedly with exit status " + exitStatus)
+        })
+        await(serverReady.future)
+        testCode(address)
+      } finally {
+        server.destroy()
+        server.exitValue()
+      }
+    catch {
+      case e: Throwable =>
+        info(log.toString)
+        throw e
     }
   }
 
