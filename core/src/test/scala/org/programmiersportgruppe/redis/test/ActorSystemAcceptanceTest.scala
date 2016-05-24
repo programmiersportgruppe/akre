@@ -2,8 +2,9 @@ package org.programmiersportgruppe.redis.test
 
 import java.net.{ InetAddress, InetSocketAddress }
 import java.util.concurrent.atomic.AtomicInteger
-import scala.concurrent.{ Await, Awaitable, Future, Promise }
+
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Awaitable, Future, Promise }
 import scala.sys.process.ProcessLogger
 
 import akka.actor.ActorSystem
@@ -51,8 +52,17 @@ class ActorSystemAcceptanceTest extends Test {
         serverReady.success(())
       log.append(line).append('\n')
     })
+
+    val stopServer = new Thread {
+      override def run(): Unit = {
+        server.destroy()
+        server.exitValue()
+      }
+    }
+
     try
       try {
+        Runtime.getRuntime.addShutdownHook(stopServer)
         serverReady.tryCompleteWith(Future {
           val exitStatus = server.exitValue()
           if (!serverReady.isCompleted)
@@ -61,8 +71,8 @@ class ActorSystemAcceptanceTest extends Test {
         await(serverReady.future)
         testCode(address)
       } finally {
-        server.destroy()
-        server.exitValue()
+        stopServer.run()
+        Runtime.getRuntime.removeShutdownHook(stopServer)
       }
     catch {
       case e: Throwable =>
