@@ -2,13 +2,13 @@ package org.programmiersportgruppe.redis.client
 
 import scala.collection.mutable
 
-import akka.testkit.{TestActorRef, TestKit}
+import akka.testkit.TestKit
+import org.scalatest.time.{ Millis, Span }
 
 import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.client.RedisSubscriptionActor.PubSubMessage
 import org.programmiersportgruppe.redis.commands.PUBLISH
-import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
-import org.scalatest.time.{ Millis, Span }
+import org.programmiersportgruppe.redis.test.{ ActorSystemAcceptanceTest, ProxyingParent }
 
 
 class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
@@ -18,9 +18,9 @@ class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
   it should "send the onConnected message" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val kit = new TestKit(system)
-        TestActorRef(RedisSubscriptionActor.props(address, messageToParentOnSubscribed = Some("ready"), Seq("chan A"), _ => ()), kit.testActor, "SOT")
-        kit.expectMsg("ready")
+        val testKit = new TestKit(system)
+        ProxyingParent(RedisSubscriptionActor.props(address, messageToParentOnSubscribed = Some("ready"), Seq("chan A"), _ => ()), testKit.testActor, "redisSubscription")
+        testKit.expectMsg("ready")
       }
     }
   }
@@ -31,18 +31,16 @@ class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
         val messages = mutable.Queue[PubSubMessage]()
         val onMessage = (m: PubSubMessage) => messages.enqueue(m)
 
-        val subscriptionKit = new TestKit(system)
-        TestActorRef(RedisSubscriptionActor.props(address, messageToParentOnSubscribed = Some("sub ready"), Seq("chan A", "chan C"), onMessage), subscriptionKit.testActor, "SOT")
+        val testKit = new TestKit(system)
 
-        val normalKit = new TestKit(system)
-        val normal = TestActorRef(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("pub ready")), normalKit.testActor, "SOT")
+        val _         = ProxyingParent(RedisSubscriptionActor.props(address, messageToParentOnSubscribed = Some("sub ready"), Seq("chan A", "chan C"), onMessage), testKit.testActor, "subscriber")
+        val publisher = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("pub ready")), testKit.testActor, "publisher")
 
-        normalKit.expectMsg("pub ready")
-        subscriptionKit.expectMsg("sub ready")
+        testKit.expectMsgAllOf("pub ready", "sub ready")
 
-        normal ! PUBLISH("chan A", "a message")
-        normal ! PUBLISH("chan B", "b message")
-        normal ! PUBLISH("chan C", "c message")
+        publisher ! PUBLISH("chan A", "a message")
+        publisher ! PUBLISH("chan B", "b message")
+        publisher ! PUBLISH("chan C", "c message")
 
         implicit def patienceConfig = super.patienceConfig.copy(Span(300, Millis))
         eventually {

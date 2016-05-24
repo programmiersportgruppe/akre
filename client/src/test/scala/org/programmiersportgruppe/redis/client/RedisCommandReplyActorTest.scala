@@ -1,13 +1,12 @@
 package org.programmiersportgruppe.redis.client
 
 import akka.pattern.ask
-import akka.testkit.{TestActorRef, TestKit}
+import akka.testkit.TestKit
 import akka.util.ByteString
 
 import org.programmiersportgruppe.redis._
-import org.programmiersportgruppe.redis.commands.{GET, SET}
-import org.programmiersportgruppe.redis.test.ActorSystemAcceptanceTest
-
+import org.programmiersportgruppe.redis.commands.{ GET, SET }
+import org.programmiersportgruppe.redis.test.{ ActorSystemAcceptanceTest, ProxyingParent }
 
 class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
 
@@ -16,18 +15,19 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
   it should "persist keys to the database" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val kit = new TestKit(system)
-        val ref = TestActorRef(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
-        kit.expectMsg("ready")
+        val testKit = new TestKit(system)
+
+        val redis = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        testKit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
         assertResult(set -> RSimpleString.OK) {
-          await(ref ? set)
+          await(redis ? set)
         }
 
         val get = GET(Key("foo"))
         assertResult(get -> RBulkString("bar")) {
-          await(ref ? get)
+          await(redis ? get)
         }
       }
     }
@@ -36,9 +36,10 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
   it should "handle receiving multiple commands at once" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val kit = new TestKit(system)
-        val ref = TestActorRef(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), kit.testActor, "SOT")
-        kit.expectMsg("ready")
+        val testKit = new TestKit(system)
+
+        val ref = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        testKit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
         val get = GET(Key("foo"))
@@ -59,12 +60,13 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
   it should "send setup commands on connection" in {
     withRedisServer { address =>
       withActorSystem { implicit system =>
-        val kit = new TestKit(system)
+        val testKit = new TestKit(system)
+
         val setupCommands = List(
           SET(Key("A"), ByteString("ABC")),
           SET(Key("X"), ByteString("XYZ")))
-        val ref = TestActorRef(RedisCommandReplyActor.props(address, setupCommands, Some("ready")), kit.testActor, "SOT")
-        kit.expectMsg("ready")
+        val ref = ProxyingParent(RedisCommandReplyActor.props(address, setupCommands, Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        testKit.expectMsg("ready")
 
         val getA = GET(Key("A"))
         val a = ref ? getA

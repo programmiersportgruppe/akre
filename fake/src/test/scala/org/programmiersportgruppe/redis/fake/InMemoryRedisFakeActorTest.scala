@@ -16,7 +16,7 @@ class InMemoryRedisFakeActorTest extends ActorSystemAcceptanceTest {
     it should "Persist and return values" in {
         withActorSystem { implicit system =>
             val kit = new TestKit(system)
-            val ref = TestActorRef(InMemoryRedisFakeActor.props(), kit.testActor, "SOT")
+            val ref = TestActorRef(InMemoryRedisFakeActor.props(), kit.testActor, "redis-fake")
 
             val set = SET(Key("foo"), ByteString("bar"))
             assertResult(set -> RSimpleString.OK) {

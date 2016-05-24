@@ -7,6 +7,7 @@ import scala.concurrent.duration._
 import scala.sys.process.ProcessLogger
 
 import akka.actor.ActorSystem
+import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 
@@ -81,11 +82,8 @@ class ActorSystemAcceptanceTest extends Test {
       }
       """
     ))
-    try {
-      testCode(actorSystem)
-    } finally {
-      actorSystem.shutdown()
-    }
+    try testCode(actorSystem)
+    finally TestKit.shutdownActorSystem(actorSystem, verifySystemShutdown = true)
   }
 
 }
