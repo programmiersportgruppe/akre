@@ -82,18 +82,10 @@ abstract class RedisConnectionActor(
 
   final def receive = {
 
-    case Tcp.CommandFailed(connect: Tcp.Connect) =>
-      // TODO: send Failure messages to waiting actors
-      val e = new UnableToConnectException(connect)
-      log.error(e.getMessage)
-      throw e
-
-    case command: Command =>
-      val e = new NotReadyException(command)
-      log.error(e.getMessage)
-      throw e
-
     case c @ Tcp.Connected(remote, local) =>
+      log.info("Connected to Redis server at {} from local endpoint {}", remote, local)
+
+      messageToParentOnConnected.foreach(context.parent ! _)
 
       val connection = context.watch(sender())
       connection ! Tcp.Register(self)
@@ -105,9 +97,6 @@ abstract class RedisConnectionActor(
 
       for (command <- connectionSetupCommands)
         executeCommand(command, Actor.noSender)
-
-      log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
-      messageToParentOnConnected.foreach(context.parent ! _)
 
       context become {
 
@@ -127,6 +116,17 @@ abstract class RedisConnectionActor(
         case closed: Tcp.ConnectionClosed if sender() == connection =>
           onConnectionClosed(closed)
       }
+
+    case Tcp.CommandFailed(connect: Tcp.Connect) =>
+      val e = new UnableToConnectException(connect)
+      log.error(e.getMessage)
+      throw e
+
+    case command: Command =>
+      val e = new NotReadyException(command)
+      log.error(e.getMessage)
+      throw e
+
   }
 
 }
