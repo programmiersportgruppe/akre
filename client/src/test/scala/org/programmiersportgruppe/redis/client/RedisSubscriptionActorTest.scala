@@ -3,7 +3,7 @@ package org.programmiersportgruppe.redis.client
 import scala.collection.mutable
 
 import akka.testkit.TestKit
-import org.scalatest.time.{ Millis, Span }
+import org.scalatest.time.{ Second, Span }
 
 import org.programmiersportgruppe.redis._
 import org.programmiersportgruppe.redis.client.RedisSubscriptionActor.PubSubMessage
@@ -42,7 +42,7 @@ class RedisSubscriptionActorTest extends ActorSystemAcceptanceTest {
         publisher ! PUBLISH("chan B", "b message")
         publisher ! PUBLISH("chan C", "c message")
 
-        implicit def patienceConfig = super.patienceConfig.copy(Span(300, Millis))
+        implicit def patienceConfig = super.patienceConfig.copy(Span(1, Second))
         eventually {
           val formattedMessages =
             messages
