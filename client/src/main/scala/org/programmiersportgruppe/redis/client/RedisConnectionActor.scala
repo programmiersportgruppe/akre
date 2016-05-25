@@ -44,7 +44,7 @@ abstract class RedisConnectionActor(
     messageToParentOnConnected: Option[Any])
   extends Actor {
 
-  protected[this] val log = Logging(this)
+  protected[this] val log = Logging(context.system, this)
 
   private[this] val replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
