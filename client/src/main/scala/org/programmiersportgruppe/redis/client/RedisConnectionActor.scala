@@ -44,15 +44,20 @@ abstract class RedisConnectionActor(
     messageToParentOnConnected: Option[Any])
   extends Actor {
 
-  protected[this] val log = Logging(context.system, this)
+  protected[this] val log = Logging(this)
 
   private[this] val replyReconstructor: ReplyReconstructor = new ParserCombinatorReplyReconstructor()
 
-  private[this] val remote =
-    if (serverAddress.isUnresolved) new InetSocketAddress(serverAddress.getHostName, serverAddress.getPort)
-    else serverAddress
-  log.debug("Connecting to Redis server at {}", remote)
-  IO(Tcp)(context.system) ! Tcp.Connect(remote)
+  override def preStart(): Unit = {
+    val resolvedServerAddress =
+      if (serverAddress.isUnresolved) {
+        log.debug(s"Resolving Redis server address for {}", serverAddress)
+        new InetSocketAddress(serverAddress.getHostName, serverAddress.getPort)
+      } else serverAddress
+
+    log.debug("Connecting to Redis server at {}", resolvedServerAddress)
+    IO(Tcp)(context.system) ! Tcp.Connect(resolvedServerAddress)
+  }
 
   /** Callback for each reply parsed from the TCP stream from the server
     */
@@ -62,7 +67,10 @@ abstract class RedisConnectionActor(
     *
     * @param closed connection closed message from the TCP socket
     */
-  protected def onConnectionClosed(closed: ConnectionClosed): Unit = {}
+  protected def onConnectionClosed(closed: ConnectionClosed): Unit = {
+    log.info("Connection to Redis server closed: {}", closed)
+    context.stop(self)
+  }
 
   /** Callback invoked when a command is sent to the server
     *
@@ -85,9 +93,9 @@ abstract class RedisConnectionActor(
       log.error(e.getMessage)
       throw e
 
-    case c @ Tcp.Connected(`remote`, local) =>
-      val connection = sender()
-      context.watch(connection)
+    case c @ Tcp.Connected(remote, local) =>
+
+      val connection = context.watch(sender())
       connection ! Tcp.Register(self)
 
       def executeCommand(command: Command, listener: ActorRef): Unit = {
@@ -97,13 +105,17 @@ abstract class RedisConnectionActor(
 
       for (command <- connectionSetupCommands)
         executeCommand(command, Actor.noSender)
-      messageToParentOnConnected.foreach(context.parent ! _)
+
       log.info("Connected to Redis server at {} from local endpoint {} and ready to accept commands", remote, local)
+      messageToParentOnConnected.foreach(context.parent ! _)
+
       context become {
+
         case command: Command =>
           log.debug("Received command {}", command)
           executeCommand(command, sender())
-        case Tcp.Received(data) =>
+
+        case Tcp.Received(data) if sender() == connection =>
           if (log.isDebugEnabled)
             log.debug(s"Received ${data.length} bytes of data: [${data.utf8String}]")
 
@@ -111,6 +123,7 @@ abstract class RedisConnectionActor(
             log.debug("Decoded reply {}", reply)
             onReplyParsed(reply)
           }
+
         case closed: Tcp.ConnectionClosed if sender() == connection =>
           onConnectionClosed(closed)
       }
