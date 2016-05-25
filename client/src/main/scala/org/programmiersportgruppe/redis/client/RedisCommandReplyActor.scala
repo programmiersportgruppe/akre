@@ -49,10 +49,10 @@ final class RedisCommandReplyActor(serverAddress: InetSocketAddress, connectionS
       case Some((originalSender, c: ConnectionCloseExpected)) =>  // TODO: what about other commands fire with executeConnectionClose?
         log.info("Connection to Redis server closed as expected: {}", closed)
         originalSender ! (())
-        context stop self
+        context.stop(self)
       case _ =>
         log.warning("Connection to Redis server closed unexpectedly: {}", closed)
-        context stop self
+        context.stop(self)
     }
 
 }
