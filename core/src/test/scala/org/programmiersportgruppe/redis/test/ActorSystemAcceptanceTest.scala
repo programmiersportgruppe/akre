@@ -4,13 +4,15 @@ import java.net.{ InetAddress, InetSocketAddress }
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Awaitable, Future, Promise }
+import scala.concurrent._
 import scala.sys.process.ProcessLogger
 
-import akka.actor.ActorSystem
+import akka.pattern.ask
+import akka.actor.{ ActorIdentity, ActorSystem, Identify }
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
+import org.scalatest.exceptions.TestFailedException
 
 
 object ActorSystemAcceptanceTest {
@@ -36,9 +38,9 @@ class ActorSystemAcceptanceTest extends Test {
   lazy val redisServerPort = nextRedisServerPort.getAndIncrement
 
   def withRedisServer[A](testCode: InetSocketAddress => A): A =
-    withRedisServer(new InetSocketAddress(LoopbackAddress.get, redisServerPort))(testCode)
+    withRedisServer()(testCode)
 
-  def withRedisServer[A](address: InetSocketAddress)(testCode: InetSocketAddress => A): A = {
+  def withRedisServer[A](address: InetSocketAddress = new InetSocketAddress(LoopbackAddress.get, redisServerPort))(testCode: InetSocketAddress => A): A = {
 
     val log = new StringBuffer("Redis server log:\n")
     val serverReady = Promise[Unit]()
@@ -91,8 +93,13 @@ class ActorSystemAcceptanceTest extends Test {
       }
       """
     ))
-    try testCode(actorSystem)
-    finally TestKit.shutdownActorSystem(actorSystem, verifySystemShutdown = true)
+    try {
+      val result = testCode(actorSystem)
+      await(actorSystem.actorSelection("/user/*") ? Identify(())) match {
+        case ActorIdentity(_, Some(actorRef)) => throw new TestFailedException(s"There is at least one user actor still running: $actorRef", 1)
+        case _                                => result
+      }
+    } finally TestKit.shutdownActorSystem(actorSystem, verifySystemShutdown = true)
   }
 
 }

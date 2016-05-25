@@ -5,7 +5,7 @@ import akka.testkit.TestKit
 import akka.util.ByteString
 
 import org.programmiersportgruppe.redis._
-import org.programmiersportgruppe.redis.commands.{ GET, SET }
+import org.programmiersportgruppe.redis.commands.{ GET, SET, SHUTDOWN }
 import org.programmiersportgruppe.redis.test.{ ActorSystemAcceptanceTest, ProxyingParent }
 
 class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
@@ -17,7 +17,7 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
       withActorSystem { implicit system =>
         val testKit = new TestKit(system)
 
-        val redis = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        val redis = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redis-actor")
         testKit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
@@ -29,6 +29,10 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
         assertResult(get -> RBulkString("bar")) {
           await(redis ? get)
         }
+
+        testKit.watch(redis)
+        redis ! SHUTDOWN()
+        testKit.expectTerminated(redis)
       }
     }
   }
@@ -38,14 +42,14 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
       withActorSystem { implicit system =>
         val testKit = new TestKit(system)
 
-        val ref = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        val redis = ProxyingParent(RedisCommandReplyActor.props(address, messageToParentOnConnected = Some("ready")), testKit.testActor, "redis-actor")
         testKit.expectMsg("ready")
 
         val set = SET(Key("foo"), ByteString("bar"))
         val get = GET(Key("foo"))
 
-        val futureSetResult = ref ? set
-        val futureGetResult = ref ? get
+        val futureSetResult = redis ? set
+        val futureGetResult = redis ? get
 
         assertResult(set -> RSimpleString.OK) {
           await(futureSetResult)
@@ -53,6 +57,10 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
         assertResult(get -> RBulkString("bar")) {
           await(futureGetResult)
         }
+
+        testKit.watch(redis)
+        redis ! SHUTDOWN()
+        testKit.expectTerminated(redis)
       }
     }
   }
@@ -65,14 +73,14 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
         val setupCommands = List(
           SET(Key("A"), ByteString("ABC")),
           SET(Key("X"), ByteString("XYZ")))
-        val ref = ProxyingParent(RedisCommandReplyActor.props(address, setupCommands, Some("ready")), testKit.testActor, "redisCommandReplyActor")
+        val redis = ProxyingParent(RedisCommandReplyActor.props(address, setupCommands, Some("ready")), testKit.testActor, "redis-actor")
         testKit.expectMsg("ready")
 
         val getA = GET(Key("A"))
-        val a = ref ? getA
+        val a = redis ? getA
 
         val getX = GET(Key("X"))
-        val x = ref ? getX
+        val x = redis ? getX
 
         assertResult(getA -> RBulkString("ABC")) {
           await(a)
@@ -80,6 +88,10 @@ class RedisCommandReplyActorTest extends ActorSystemAcceptanceTest {
         assertResult(getX -> RBulkString("XYZ")) {
           await(x)
         }
+
+        testKit.watch(redis)
+        redis ! SHUTDOWN()
+        testKit.expectTerminated(redis)
       }
     }
   }

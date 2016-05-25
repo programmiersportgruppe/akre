@@ -35,6 +35,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         } yield g
 
         assertResult(Some("A value")) { await(retrieved) }
+
+        await(client.shutdown())
       }
     }
   }
@@ -52,6 +54,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         } yield d
 
         assertResult(1) { await(deleted) }
+
+        await(client.shutdown())
       }
     }
   }
@@ -72,6 +76,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
 
       val Some(Failure(e: RequestExecutionException)) = future.value
       e.cause shouldBe EmptyPoolException(setCommand)
+
+      await(client.shutdown())
     }
   }
 
@@ -101,6 +107,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
         }
+
+        await(client.shutdown())
       }
     }
   }
@@ -123,6 +131,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         assertResult(RSimpleString.OK) {
           await(SET(Key("A key"), ByteString(4)).execute)
         }
+
+        await(client.shutdown())
       }
     }
   }
@@ -139,6 +149,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
             await(GET(Key("song")).executeString)
           }
         }
+
+        await(client.shutdown())
       }
     }
   }
@@ -156,6 +168,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         } yield d
 
         assertResult(Some("This")) { await(getRange) }
+
+        await(client.shutdown())
       }
     }
   }
@@ -172,6 +186,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         } yield d
 
         assertResult(Some("ing")) { await(getRange) }
+
+        await(client.shutdown())
       }
     }
   }
@@ -188,6 +204,8 @@ class RedisClientAcceptanceTest extends ActorSystemAcceptanceTest {
         } yield d
 
         assertResult(Some("string")) { await(getRange) }
+
+        await(client.shutdown())
       }
     }
   }
