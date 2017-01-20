@@ -100,7 +100,7 @@ lazy val core = project
   .settings(sharedSettings: _*)
   .settings(
     description := "Core Redis abstractions for Akre.",
-    libraryDependencies <+= akkaActor,  // for `akka.util.ByteString`
+    libraryDependencies += akkaActor.value,  // for `akka.util.ByteString`
     libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   )
@@ -112,7 +112,7 @@ lazy val commands = project
   .settings(sharedSettings: _*)
   .settings(
     description := "Scala abstractions for Redis commands.",
-    libraryDependencies <+= akkaActor
+    libraryDependencies += akkaActor.value
   )
 
 lazy val protocol = project
