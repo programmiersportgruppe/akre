@@ -92,8 +92,8 @@ val sharedSettings = Seq[Def.Setting[_]](
       "com.typesafe.akka" %% "akka-actor" -> url(s"http://doc.akka.io/api/akka/${akkaVersion.value}/")
     ).flatMap { case (lib, url) => jar(lib).map(_ -> url) }.toMap
   },
-  MimaKeys.previousArtifacts := previousVersion.value.map(v => projectID.value.copy(revision = v, explicitArtifacts = Nil)).toSet,
-  MimaKeys.failOnProblem := failOnBinaryIncompatibility.value
+  MimaKeys.mimaPreviousArtifacts := previousVersion.value.map(v => projectID.value.copy(revision = v, explicitArtifacts = Nil)).toSet,
+  MimaKeys.mimaFailOnProblem := failOnBinaryIncompatibility.value
 )
 
 lazy val core = project
