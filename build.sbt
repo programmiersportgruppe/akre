@@ -24,7 +24,7 @@ publishTo in Global := Some {
 }
 
 
-lazy val akkaVersion = Def.setting("2.3.15")
+lazy val akkaVersion = Def.setting("2.3.16")
 
 lazy val akkaActor = Def.setting("com.typesafe.akka" %% "akka-actor" % akkaVersion.value)
 
