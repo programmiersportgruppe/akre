@@ -102,7 +102,7 @@ lazy val core = project
     description := "Core Redis abstractions for Akre.",
     libraryDependencies <+= akkaActor,  // for `akka.util.ByteString`
     libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion.value % "test",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   )
 
 def coreDependency = core % "compile->compile;test->test"
