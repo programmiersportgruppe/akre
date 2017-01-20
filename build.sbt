@@ -38,8 +38,6 @@ val sharedSettings = Seq[Def.Setting[_]](
   )),
   licenses := Seq("MIT Licence" -> url("http://opensource.org/licenses/MIT")),
   organization := "org.programmiersportgruppe.akre",
-  conflictManager := ConflictManager.strict,
-  dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
   scalacOptions := Seq(
     "-deprecation",
     "-encoding", "UTF-8",
@@ -121,7 +119,7 @@ lazy val protocol = project
   .settings(
     description := "A RESP (REdis Serialization Protocol) implementation.",
     libraryDependencies ++= (
-      if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4")
+      if (scalaVersion.value startsWith "2.11.") Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5")
       else Nil
     )
   )
